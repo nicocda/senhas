@@ -112,7 +112,8 @@ Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas
 
 - [x] `git init`, `.gitignore`, `.gitattributes`, primer commit con este plan
 - [x] Crear la app Expo en `app/` (plantilla `default@sdk-58`)
-- [ ] TypeScript `strict`, ESLint, Prettier, scripts de `npm` (`lint`, `typecheck`, `format`)
+- [x] TypeScript `strict`, ESLint, Prettier, scripts de `npm` (`lint`, `typecheck`, `format`, `check`)
+- [ ] Limpiar la plantilla: quitar la demo (`reset-project`) y el soporte web
 - [x] *Development build* (`npx expo run:android`) en el emulador y en el teléfono. Requirió CMake 3.31.6 + config plugin ([ADR 0002](decisiones/0002-cmake-rutas-largas-windows.md))
 - [ ] `README.md`, `CLAUDE.md`, primeros ADRs (stack, plugin propio de MediaPipe)
 

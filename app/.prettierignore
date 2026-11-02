@@ -1,0 +1,2 @@
+# Prettier 3 ya ignora lo que está en .gitignore (node_modules/, android/, ...).
+package-lock.json
