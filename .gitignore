@@ -1,0 +1,10 @@
+# Ignorados a nivel raíz. Cada subproyecto (app/, ml/) tiene su propio .gitignore.
+
+# Secretos y configuración local: nunca al repo.
+.env
+.env*.local
+
+# Archivos que genera el sistema operativo.
+Thumbs.db
+desktop.ini
+.DS_Store

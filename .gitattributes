@@ -1,0 +1,10 @@
+# Normaliza los saltos de línea: en el repo siempre LF, sin importar el SO.
+* text=auto eol=lf
+
+# Los scripts de Windows necesitan CRLF para ejecutarse bien (p. ej. gradlew.bat).
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Modelos de ML: binarios, nunca se comparan ni convierten como texto.
+*.task binary
+*.tflite binary
