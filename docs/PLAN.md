@@ -93,7 +93,7 @@ servicios con LLM o tokens (todo corre en el teléfono).
 
 Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas a aprender**.
 
-### Hito 0 — Entorno de desarrollo · 🟡 casi completo
+### Hito 0 — Entorno de desarrollo · ✅ completo
 
 - [x] JDK 17 (Microsoft OpenJDK) + `JAVA_HOME`
 - [x] Android SDK por línea de comandos + `ANDROID_HOME` + `Path`
@@ -103,17 +103,17 @@ Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas
 - [x] Android Studio desinstalado (no hace falta)
 - [x] Webcam en el emulador: Logitech C270 = `webcam2` en `config.ini` (la VGA fallaba con `BGR4 → I420`). Ojo: las etiquetas `webcamN` cambian si conectas o desconectas cámaras; revisar con `emulator -webcam-list -avd senhas_pixel`
 - [x] Primer arranque del emulador + `adb devices` lo lista (`emulator-5554`, Android 15)
-- [ ] Teléfono físico conectado por USB (depuración USB activada)
+- [x] Teléfono físico conectado por USB (Android 16, `arm64-v8a`)
 
 **Hecho cuando:** `adb devices` muestra el emulador y el teléfono, y la app Cámara del emulador ve tu webcam.
 **Aprendes:** JDK y Gradle, SDK, `adb`, AVD, virtualización, variables de entorno.
 
-### Hito 1 — Proyecto base con buenas prácticas
+### Hito 1 — Proyecto base con buenas prácticas · 🟡 en curso
 
-- [ ] `git init`, `.gitignore`, primer commit con este plan
-- [ ] Crear la app Expo en `app/` (entender qué genera cada archivo del template)
+- [x] `git init`, `.gitignore`, `.gitattributes`, primer commit con este plan
+- [x] Crear la app Expo en `app/` (plantilla `default@sdk-58`)
 - [ ] TypeScript `strict`, ESLint, Prettier, scripts de `npm` (`lint`, `typecheck`, `format`)
-- [ ] *Development build* (`npx expo run:android`) en el emulador y en el teléfono
+- [x] *Development build* (`npx expo run:android`) en el emulador y en el teléfono. Requirió CMake 3.31.6 + config plugin ([ADR 0002](decisiones/0002-cmake-rutas-largas-windows.md))
 - [ ] `README.md`, `CLAUDE.md`, primeros ADRs (stack, plugin propio de MediaPipe)
 
 **Hecho cuando:** la app corre en ambos dispositivos y `lint` y `typecheck` pasan sin errores.
