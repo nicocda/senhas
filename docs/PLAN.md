@@ -126,7 +126,7 @@ Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas
 **Aprendes:** Expo vs React Native "pelado", Expo Go vs development build, Metro, *prebuild*
 y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 
-### Hito 2 — Cámara
+### Hito 2 — Cámara · ✅ completo
 
 - [x] Instalar VisionCamera v5 y sus dependencias (Nitro, worklets)
 - [x] Permisos de cámara (configuración + pedido en tiempo de ejecución + qué pasa si el usuario los niega)
@@ -134,7 +134,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 - [x] Primer *frame processor* en JS que solo cuenta FPS (formato `yuv`: `native` falla en el emulador)
 - [x] Emulador: la webcam como cámara **frontal** (`hw.camera.front=webcam2`, `hw.camera.back=emulated`)
 - [x] Probar en el teléfono físico y comparar FPS (emulador: 18–21 FPS con la Logitech C270; teléfono Xiaomi: 25+ FPS, con la capa extra de permisos de MIUI funcionando)
-- [ ] Quiz del Hito 2
+- [x] Quiz del Hito 2 (2/4: `app.json` también es nativo → recompilar)
 
 **Hecho cuando:** ves la cámara en el teléfono y un contador de FPS estable.
 **Aprendes:** permisos de Android, componentes nativos, hilos (UI, JS, cámara), worklets.
