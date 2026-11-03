@@ -139,24 +139,30 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 **Hecho cuando:** ves la cámara en el teléfono y un contador de FPS estable.
 **Aprendes:** permisos de Android, componentes nativos, hilos (UI, JS, cámara), worklets.
 
-### Hito 3 — Detección de la mano (código nativo)
+### Hito 3 — Detección de la mano (código nativo) · ✅ completo
 
-- [ ] Módulo nativo local en `app/modules/` (Kotlin) como *frame processor plugin* de VisionCamera v5
-- [ ] Integrar MediaPipe Hand Landmarker y empaquetar `hand_landmarker.task`
-- [ ] Devolver los 21 puntos a JS con tipos de TypeScript
-- [ ] Dibujar los puntos y huesos sobre la vista previa (la librería de dibujo se investiga en este hito)
-- [ ] Medir rendimiento (ms por cuadro) en emulador vs teléfono
+- [x] Módulo nativo local en `app/modules/` (Kotlin) como *frame processor plugin* de VisionCamera v5 ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md))
+- [x] Integrar MediaPipe Hand Landmarker y empaquetar `hand_landmarker.task` (se descarga al compilar, con SHA-256 verificado)
+- [x] Devolver los 21 puntos a JS con tipos de TypeScript
+- [x] Dibujar los puntos y huesos sobre la vista previa (Skia 2.14 + shared values de Reanimated)
+- [x] Puntos en coordenadas verticales (MediaPipe los devuelve en coordenadas del sensor) y cuadros que siguen a la pantalla al girar el teléfono
+- [x] Cámara pausada en segundo plano (`isActive` según `AppState`)
+- [x] Medir rendimiento (ms por cuadro) en emulador vs teléfono. Teléfono: ~23 FPS, copia 5 ms, MediaPipe ~50 ms. Emulador: ~8–11 FPS, copia 7–10 ms, MediaPipe ~70–100 ms
+- [x] Quiz del Hito 3 (2/4: un spec `.nitro.ts` también termina en el APK → nitrogen + recompilar; espejado ≠ rotación)
+- [ ] *Pendiente para más adelante:* probar el delegado GPU en el teléfono para bajar los ~50 ms de MediaPipe
 
 **Hecho cuando:** el esqueleto de tu mano se dibuja en vivo y sigue el movimiento con fluidez en el teléfono.
 **Aprendes:** Kotlin básico, Gradle, Nitro Modules, puente JS ↔ nativo, formatos de imagen (YUV/RGB), coordenadas normalizadas.
 
 ### Hito 4 — Datos y entrenamiento (Python)
 
+- [ ] Ejercicio práctico JS ↔ nativo: cambiar un spec sin nitrogen ni recompilar, ver el error, y después hacerlo bien
+- [ ] Estructura de **paquetes de lengua** pensada para sumar otras lenguas de señas: `ml/languages/aed/` (ISO 639-3 de la LSA) con el catálogo de señas y los datos; el entrenamiento **genera** el `manifest.json` (labels en orden, hash del modelo, versión de normalización) junto al `.tflite`. Va en un ADR
 - [ ] Investigar si existen datasets públicos del alfabeto LSA (y sus licencias)
 - [ ] Pantalla de captura en la app: eliges una letra y graba N muestras de puntos (**no** imágenes)
 - [ ] Exportar las muestras a la PC (JSON o CSV) y armar el dataset en `ml/data/`
 - [ ] Entorno Python aislado (`venv`) con dependencias fijadas
-- [ ] Preprocesado: normalizar los puntos (posición, escala, mano izquierda o derecha)
+- [ ] Preprocesado: normalizar los puntos (posición, escala, mano izquierda o derecha, y rotación: con el teléfono acostado la mano llega girada respecto de la pantalla)
 - [ ] Entrenar el clasificador (Keras), evaluarlo (exactitud, matriz de confusión) y exportarlo a `.tflite`
 - [ ] Probar el `.tflite` en la PC con `ai-edge-litert`
 
@@ -188,7 +194,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 | # | Decisión | Cuándo |
 |---|---|---|
 | 1 | Runtime del clasificador en la app | Hito 5 |
-| 2 | Librería para dibujar el esqueleto sobre la cámara | Hito 3 |
+| ~~2~~ | ~~Librería para dibujar el esqueleto sobre la cámara~~ → Skia ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md)) | ✅ Hito 3 |
 | 3 | Gestor de entorno Python (`venv` + `pip` o alternativa) | Hito 4 |
 | 4 | Fuente de datos del alfabeto LSA (propia vs pública) | Hito 4 |
 

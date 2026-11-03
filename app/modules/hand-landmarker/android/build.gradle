@@ -1,0 +1,163 @@
+// Adapted from the official VisionCamera v5 plugin react-native-vision-camera-barcode-scanner@5.2.4.
+// No buildscript block: this module is only built inside the app, which provides AGP and Kotlin.
+
+import java.security.MessageDigest
+
+def reactNativeArchitectures() {
+  def value = rootProject.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+}
+
+def isNewArchitectureEnabled() {
+  return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
+}
+
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply from: "../nitrogen/generated/android/HandLandmarker+autolinking.gradle"
+
+if (isNewArchitectureEnabled()) {
+  apply plugin: "com.facebook.react"
+}
+
+def getExtOrDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["HandLandmarker_" + name]
+}
+
+def getExtOrIntegerDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["HandLandmarker_" + name]).toInteger()
+}
+
+// MediaPipe model, pinned and verified. Downloaded at build time (like Google's official
+// sample) instead of committing a 7.8 MB binary whose license isn't stated.
+def modelUrl = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+def modelSha256 = "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1"
+def modelAssetsDir = layout.buildDirectory.dir("generated/mediapipe-assets").get().asFile
+
+def downloadModel = tasks.register("downloadHandLandmarkerModel") {
+  inputs.property("url", modelUrl)
+  inputs.property("sha256", modelSha256)
+  outputs.file(new File(modelAssetsDir, "hand_landmarker.task"))
+  doLast {
+    def file = new File(modelAssetsDir, "hand_landmarker.task")
+    file.parentFile.mkdirs()
+    URI.create(modelUrl).toURL().withInputStream { input -> file.withOutputStream { it << input } }
+    def actual = MessageDigest.getInstance("SHA-256").digest(file.bytes).encodeHex().toString()
+    if (actual != modelSha256) {
+      file.delete()
+      throw new GradleException("hand_landmarker.task SHA-256 mismatch: expected ${modelSha256}, got ${actual}")
+    }
+  }
+}
+
+android {
+  namespace "com.margelo.nitro.handlandmarker"
+
+  ndkVersion getExtOrDefault("ndkVersion")
+  compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getExtOrIntegerDefault("minSdkVersion")
+    targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+
+    externalNativeBuild {
+      cmake {
+        cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters (*reactNativeArchitectures())
+
+        buildTypes {
+          debug {
+            cppFlags "-O1 -g"
+          }
+          release {
+            cppFlags "-O2"
+          }
+        }
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+    }
+  }
+
+  packagingOptions {
+    excludes = [
+            "META-INF",
+            "META-INF/**",
+            "**/libc++_shared.so",
+            "**/libNitroModules.so",
+            "**/libfbjni.so",
+            "**/libjsi.so",
+            "**/libfolly_json.so",
+            "**/libfolly_runtime.so",
+            "**/libglog.so",
+            "**/libhermes.so",
+            "**/libhermes-executor-debug.so",
+            "**/libhermes_executor.so",
+            "**/libreactnative.so",
+            "**/libreactnativejni.so",
+            "**/libturbomodulejsijni.so",
+            "**/libreact_nativemodule_core.so",
+            "**/libjscexecutor.so"
+    ]
+  }
+
+  buildFeatures {
+    buildConfig true
+    prefab true
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+    }
+  }
+
+  lintOptions {
+    disable "GradleCompatible"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  sourceSets {
+    main {
+      assets.srcDirs += [modelAssetsDir]
+      if (isNewArchitectureEnabled()) {
+        java.srcDirs += [
+          // React Codegen files
+          "${project.buildDir}/generated/source/codegen/java"
+        ]
+      }
+    }
+  }
+}
+
+tasks.named("preBuild") { dependsOn(downloadModel) }
+
+repositories {
+  mavenCentral()
+  google()
+}
+
+dependencies {
+  //noinspection GradleDynamicVersion
+  implementation "com.facebook.react:react-native:+"
+
+  // Same CameraX version as react-native-vision-camera 5.2.4 (for ImageProxy).
+  implementation "androidx.camera:camera-core:1.7.0-alpha03"
+
+  // MediaPipe Tasks Vision (Hand Landmarker). Google Maven only.
+  implementation "com.google.mediapipe:tasks-vision:1.2.2"
+
+  implementation project(":react-native-nitro-modules")
+  // For HybridFrameSpec and NativeFrame.
+  implementation project(":react-native-vision-camera")
+}

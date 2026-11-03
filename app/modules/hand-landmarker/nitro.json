@@ -1,0 +1,20 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "cxxNamespace": ["handlandmarker"],
+  "ios": {
+    "iosModuleName": "HandLandmarker"
+  },
+  "android": {
+    "androidNamespace": ["handlandmarker"],
+    "androidCxxLibName": "HandLandmarker"
+  },
+  "autolinking": {
+    "HandLandmarkerFactory": {
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridHandLandmarkerFactory"
+      }
+    }
+  },
+  "ignorePaths": ["**/node_modules"]
+}
