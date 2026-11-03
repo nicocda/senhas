@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@shopify/react-native-skia": "2.14.0",
     "expo": "~58.0.23",
     "expo-constants": "~58.0.14",
     "expo-linking": "~58.0.16",
     "expo-router": "~58.0.30",
     "expo-splash-screen": "~58.0.13",
     "expo-system-ui": "~58.0.7",
+    "hand-landmarker": "file:modules/hand-landmarker",
     "react": "19.3.0",
     "react-native": "0.88.1",
     "react-native-gesture-handler": "~3.3.0",
@@ -26,6 +28,7 @@
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
     "eslint-config-prettier": "^10.1.8",
+    "nitrogen": "0.37.1",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3"
   },
