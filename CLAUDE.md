@@ -12,6 +12,12 @@
 - `ml/`: Python (MediaPipe + Keras → .tflite). `docs/`: PLAN.md y ADRs.
 - ML on-device: MediaPipe Hand Landmarker (21 landmarks) → clasificador propio.
 
+## Módulo nativo `app/modules/hand-landmarker`
+- Plugin de VisionCamera v5 (Nitro + MediaPipe, Kotlin). Ver [ADR 0004](docs/decisiones/0004-plugin-hand-landmarker.md).
+- Si cambia un spec `*.nitro.ts`: `npx nitrogen` dentro del módulo y commitear `nitrogen/generated/`.
+- Cualquier cambio en Kotlin o en los specs requiere recompilar (`npm run android`). Los cambios solo de `.ts`/`.tsx` en `src/` se ven con Fast Refresh: probá ahí antes de recompilar.
+- Las capturas de la cámara muestran la cara del usuario (PII biométrica): borrarlas después de verificar, nunca commitearlas.
+
 ## Comandos (desde `app/`)
 - `npm run check`: typecheck + lint + format:check. Tiene que pasar antes de cada commit.
 - `npm run android`: compila e instala en el emulador o dispositivo.
