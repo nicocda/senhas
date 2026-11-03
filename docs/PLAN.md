@@ -17,12 +17,15 @@ detectar las manos y reconocer **LSA (Lengua de Señas Argentina)**. Empezamos p
 1. **Investigar antes de usar.** Antes de adoptar una herramienta, librería o comando,
    verificamos en fuentes oficiales (docs, npm, PyPI, Maven) que esté vigente y mantenida.
    Nada se instala "por si acaso" ni "porque es lo habitual".
-2. **Explicar antes de hacer.** Cada paso empieza explicando qué es, para qué sirve y qué
-   alternativas hay.
-3. **Participación activa.** Los comandos importantes los ejecutas tú. Claude explica,
-   propone, revisa y destraba.
+2. **Hacer y explicar después.** Claude avanza con autonomía y, al terminar cada tarea,
+   explica qué hizo, qué decidió y por qué, con las alternativas. Las tareas grandes
+   empiezan con un plan corto que puedes frenar.
+3. **Participación activa.** Preguntas, revisas y decides el rumbo; los quizzes de cada
+   hito fijan lo aprendido.
 4. **Verificar, no suponer.** Después de cada paso comprobamos que funcionó de verdad, no
-   solo que el comando terminó sin error.
+   solo que el comando terminó sin error. Un hook de Claude Code
+   ([`.claude/hooks/check-before-commit.mjs`](../.claude/hooks/check-before-commit.mjs))
+   bloquea cualquier commit si `npm run check` falla.
 5. **Buenas prácticas desde el día 1.** TypeScript estricto, lint y formato automáticos,
    commits pequeños y descriptivos, decisiones documentadas.
 6. **Privacidad por diseño.** Las imágenes de manos y caras son datos biométricos (PII).
@@ -34,7 +37,7 @@ detectar las manos y reconocer **LSA (Lengua de Señas Argentina)**. Empezamos p
 ### Ciclo de cada paso
 
 ```text
-Investigar → Explicar → Decidir (tú) → Ejecutar → Verificar → Documentar → Preguntas
+Plan (si es grande) → Investigar → Ejecutar → Verificar → Documentar → Explicar → Preguntas
 ```
 
 - **Documentar:** cada decisión relevante queda en un ADR (*Architecture Decision Record*)
@@ -113,9 +116,11 @@ Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas
 - [x] `git init`, `.gitignore`, `.gitattributes`, primer commit con este plan
 - [x] Crear la app Expo en `app/` (plantilla `default@sdk-58`)
 - [x] TypeScript `strict`, ESLint, Prettier, scripts de `npm` (`lint`, `typecheck`, `format`, `check`)
-- [ ] Limpiar la plantilla: quitar la demo (`reset-project`) y el soporte web
+- [x] Limpiar la plantilla: quitar la demo (`reset-project`) y el soporte web ([ADR 0003](decisiones/0003-solo-android-sin-demo.md))
 - [x] *Development build* (`npx expo run:android`) en el emulador y en el teléfono. Requirió CMake 3.31.6 + config plugin ([ADR 0002](decisiones/0002-cmake-rutas-largas-windows.md))
-- [ ] `README.md`, `CLAUDE.md`, primeros ADRs (stack, plugin propio de MediaPipe)
+- [x] `README.md`, `CLAUDE.md`, primeros ADRs (el plugin propio de MediaPipe quedó en el [ADR 0001](decisiones/0001-stack-tecnologico.md))
+- [x] Hook que bloquea commits si `npm run check` falla
+- [ ] Quiz del Hito 1
 
 **Hecho cuando:** la app corre en ambos dispositivos y `lint` y `typecheck` pasan sin errores.
 **Aprendes:** Expo vs React Native "pelado", Expo Go vs development build, Metro, *prebuild*
