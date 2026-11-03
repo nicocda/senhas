@@ -133,7 +133,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 - [x] Pantalla con vista previa de la cámara frontal
 - [x] Primer *frame processor* en JS que solo cuenta FPS (formato `yuv`: `native` falla en el emulador)
 - [x] Emulador: la webcam como cámara **frontal** (`hw.camera.front=webcam2`, `hw.camera.back=emulated`)
-- [ ] Probar en el teléfono físico y comparar FPS (emulador: 18–21 FPS con la Logitech C270)
+- [x] Probar en el teléfono físico y comparar FPS (emulador: 18–21 FPS con la Logitech C270; teléfono Xiaomi: 25+ FPS, con la capa extra de permisos de MIUI funcionando)
 - [ ] Quiz del Hito 2
 
 **Hecho cuando:** ves la cámara en el teléfono y un contador de FPS estable.
