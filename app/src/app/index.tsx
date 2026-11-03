@@ -53,6 +53,9 @@ function CameraPreview() {
         device={device}
         outputs={[frameOutput]}
         resizeMode="cover"
+        // The UI is locked to portrait, so frames must follow the screen, not the
+        // physical device; otherwise landmarks rotate when the phone is turned.
+        orientationSource="interface"
         isActive={isForeground}
       />
       <HandSkeleton landmarks={landmarks} imageSize={imageSize} mirrored />
