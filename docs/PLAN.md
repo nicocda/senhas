@@ -17,12 +17,15 @@ detectar las manos y reconocer **LSA (Lengua de Señas Argentina)**. Empezamos p
 1. **Investigar antes de usar.** Antes de adoptar una herramienta, librería o comando,
    verificamos en fuentes oficiales (docs, npm, PyPI, Maven) que esté vigente y mantenida.
    Nada se instala "por si acaso" ni "porque es lo habitual".
-2. **Explicar antes de hacer.** Cada paso empieza explicando qué es, para qué sirve y qué
-   alternativas hay.
-3. **Participación activa.** Los comandos importantes los ejecutas tú. Claude explica,
-   propone, revisa y destraba.
+2. **Hacer y explicar después.** Claude avanza con autonomía y, al terminar cada tarea,
+   explica qué hizo, qué decidió y por qué, con las alternativas. Las tareas grandes
+   empiezan con un plan corto que puedes frenar.
+3. **Participación activa.** Preguntas, revisas y decides el rumbo; los quizzes de cada
+   hito fijan lo aprendido.
 4. **Verificar, no suponer.** Después de cada paso comprobamos que funcionó de verdad, no
-   solo que el comando terminó sin error.
+   solo que el comando terminó sin error. Un hook de Claude Code
+   ([`.claude/hooks/check-before-commit.mjs`](../.claude/hooks/check-before-commit.mjs))
+   bloquea cualquier commit si `npm run check` falla.
 5. **Buenas prácticas desde el día 1.** TypeScript estricto, lint y formato automáticos,
    commits pequeños y descriptivos, decisiones documentadas.
 6. **Privacidad por diseño.** Las imágenes de manos y caras son datos biométricos (PII).
@@ -34,7 +37,7 @@ detectar las manos y reconocer **LSA (Lengua de Señas Argentina)**. Empezamos p
 ### Ciclo de cada paso
 
 ```text
-Investigar → Explicar → Decidir (tú) → Ejecutar → Verificar → Documentar → Preguntas
+Plan (si es grande) → Investigar → Ejecutar → Verificar → Documentar → Explicar → Preguntas
 ```
 
 - **Documentar:** cada decisión relevante queda en un ADR (*Architecture Decision Record*)
@@ -93,7 +96,7 @@ servicios con LLM o tokens (todo corre en el teléfono).
 
 Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas a aprender**.
 
-### Hito 0 — Entorno de desarrollo · 🟡 casi completo
+### Hito 0 — Entorno de desarrollo · ✅ completo
 
 - [x] JDK 17 (Microsoft OpenJDK) + `JAVA_HOME`
 - [x] Android SDK por línea de comandos + `ANDROID_HOME` + `Path`
@@ -103,18 +106,21 @@ Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas
 - [x] Android Studio desinstalado (no hace falta)
 - [x] Webcam en el emulador: Logitech C270 = `webcam2` en `config.ini` (la VGA fallaba con `BGR4 → I420`). Ojo: las etiquetas `webcamN` cambian si conectas o desconectas cámaras; revisar con `emulator -webcam-list -avd senhas_pixel`
 - [x] Primer arranque del emulador + `adb devices` lo lista (`emulator-5554`, Android 15)
-- [ ] Teléfono físico conectado por USB (depuración USB activada)
+- [x] Teléfono físico conectado por USB (Android 16, `arm64-v8a`)
 
 **Hecho cuando:** `adb devices` muestra el emulador y el teléfono, y la app Cámara del emulador ve tu webcam.
 **Aprendes:** JDK y Gradle, SDK, `adb`, AVD, virtualización, variables de entorno.
 
-### Hito 1 — Proyecto base con buenas prácticas
+### Hito 1 — Proyecto base con buenas prácticas · ✅ completo
 
-- [ ] `git init`, `.gitignore`, primer commit con este plan
-- [ ] Crear la app Expo en `app/` (entender qué genera cada archivo del template)
-- [ ] TypeScript `strict`, ESLint, Prettier, scripts de `npm` (`lint`, `typecheck`, `format`)
-- [ ] *Development build* (`npx expo run:android`) en el emulador y en el teléfono
-- [ ] `README.md`, `CLAUDE.md`, primeros ADRs (stack, plugin propio de MediaPipe)
+- [x] `git init`, `.gitignore`, `.gitattributes`, primer commit con este plan
+- [x] Crear la app Expo en `app/` (plantilla `default@sdk-58`)
+- [x] TypeScript `strict`, ESLint, Prettier, scripts de `npm` (`lint`, `typecheck`, `format`, `check`)
+- [x] Limpiar la plantilla: quitar la demo (`reset-project`) y el soporte web ([ADR 0003](decisiones/0003-solo-android-sin-demo.md))
+- [x] *Development build* (`npx expo run:android`) en el emulador y en el teléfono. Requirió CMake 3.31.6 + config plugin ([ADR 0002](decisiones/0002-cmake-rutas-largas-windows.md))
+- [x] `README.md`, `CLAUDE.md`, primeros ADRs (el plugin propio de MediaPipe quedó en el [ADR 0001](decisiones/0001-stack-tecnologico.md))
+- [x] Hook que bloquea commits si `npm run check` falla
+- [x] Quiz del Hito 1 (2/4: repasar la división JS ↔ nativo en el Hito 2)
 
 **Hecho cuando:** la app corre en ambos dispositivos y `lint` y `typecheck` pasan sin errores.
 **Aprendes:** Expo vs React Native "pelado", Expo Go vs development build, Metro, *prebuild*
