@@ -111,7 +111,7 @@ Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas
 **Hecho cuando:** `adb devices` muestra el emulador y el teléfono, y la app Cámara del emulador ve tu webcam.
 **Aprendes:** JDK y Gradle, SDK, `adb`, AVD, virtualización, variables de entorno.
 
-### Hito 1 — Proyecto base con buenas prácticas · 🟡 en curso
+### Hito 1 — Proyecto base con buenas prácticas · ✅ completo
 
 - [x] `git init`, `.gitignore`, `.gitattributes`, primer commit con este plan
 - [x] Crear la app Expo en `app/` (plantilla `default@sdk-58`)
@@ -120,7 +120,7 @@ Cada hito tiene un **criterio de hecho** verificable y una lista de **lo que vas
 - [x] *Development build* (`npx expo run:android`) en el emulador y en el teléfono. Requirió CMake 3.31.6 + config plugin ([ADR 0002](decisiones/0002-cmake-rutas-largas-windows.md))
 - [x] `README.md`, `CLAUDE.md`, primeros ADRs (el plugin propio de MediaPipe quedó en el [ADR 0001](decisiones/0001-stack-tecnologico.md))
 - [x] Hook que bloquea commits si `npm run check` falla
-- [ ] Quiz del Hito 1
+- [x] Quiz del Hito 1 (2/4: repasar la división JS ↔ nativo en el Hito 2)
 
 **Hecho cuando:** la app corre en ambos dispositivos y `lint` y `typecheck` pasan sin errores.
 **Aprendes:** Expo vs React Native "pelado", Expo Go vs development build, Metro, *prebuild*
