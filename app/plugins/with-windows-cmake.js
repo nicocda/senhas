@@ -48,7 +48,7 @@ const withWindowsCmake = (config) =>
       const cmakeDir = path.join(sdk, 'cmake', CMAKE_VERSION);
       if (!fs.existsSync(cmakeDir)) {
         console.warn(
-          `[with-windows-cmake] No existe ${cmakeDir}. Instálala con: android sdk install cmake/${CMAKE_VERSION}`
+          `[with-windows-cmake] No existe ${cmakeDir}. Instálala con: android sdk install cmake/${CMAKE_VERSION}`,
         );
         return cfg;
       }
