@@ -139,7 +139,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 **Hecho cuando:** ves la cámara en el teléfono y un contador de FPS estable.
 **Aprendes:** permisos de Android, componentes nativos, hilos (UI, JS, cámara), worklets.
 
-### Hito 3 — Detección de la mano (código nativo)
+### Hito 3 — Detección de la mano (código nativo) · ✅ completo
 
 - [x] Módulo nativo local en `app/modules/` (Kotlin) como *frame processor plugin* de VisionCamera v5 ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md))
 - [x] Integrar MediaPipe Hand Landmarker y empaquetar `hand_landmarker.task` (se descarga al compilar, con SHA-256 verificado)
@@ -148,7 +148,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 - [x] Puntos en coordenadas verticales (MediaPipe los devuelve en coordenadas del sensor) y cuadros que siguen a la pantalla al girar el teléfono
 - [x] Cámara pausada en segundo plano (`isActive` según `AppState`)
 - [x] Medir rendimiento (ms por cuadro) en emulador vs teléfono. Teléfono: ~23 FPS, copia 5 ms, MediaPipe ~50 ms. Emulador: ~8–11 FPS, copia 7–10 ms, MediaPipe ~70–100 ms
-- [ ] Quiz del Hito 3
+- [x] Quiz del Hito 3 (2/4: un spec `.nitro.ts` también termina en el APK → nitrogen + recompilar; espejado ≠ rotación)
 - [ ] *Pendiente para más adelante:* probar el delegado GPU en el teléfono para bajar los ~50 ms de MediaPipe
 
 **Hecho cuando:** el esqueleto de tu mano se dibuja en vivo y sigue el movimiento con fluidez en el teléfono.
@@ -156,6 +156,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 
 ### Hito 4 — Datos y entrenamiento (Python)
 
+- [ ] Ejercicio práctico JS ↔ nativo: cambiar un spec sin nitrogen ni recompilar, ver el error, y después hacerlo bien
 - [ ] Estructura de **paquetes de lengua** pensada para sumar otras lenguas de señas: `ml/languages/aed/` (ISO 639-3 de la LSA) con el catálogo de señas y los datos; el entrenamiento **genera** el `manifest.json` (labels en orden, hash del modelo, versión de normalización) junto al `.tflite`. Va en un ADR
 - [ ] Investigar si existen datasets públicos del alfabeto LSA (y sus licencias)
 - [ ] Pantalla de captura en la app: eliges una letra y graba N muestras de puntos (**no** imágenes)
