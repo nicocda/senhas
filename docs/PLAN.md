@@ -128,10 +128,13 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 
 ### Hito 2 — Cámara
 
-- [ ] Instalar VisionCamera v5 y sus dependencias (Nitro, worklets)
-- [ ] Permisos de cámara (configuración + pedido en tiempo de ejecución + qué pasa si el usuario los niega)
-- [ ] Pantalla con vista previa de la cámara frontal
-- [ ] Primer *frame processor* en JS que solo cuenta FPS
+- [x] Instalar VisionCamera v5 y sus dependencias (Nitro, worklets)
+- [x] Permisos de cámara (configuración + pedido en tiempo de ejecución + qué pasa si el usuario los niega)
+- [x] Pantalla con vista previa de la cámara frontal
+- [x] Primer *frame processor* en JS que solo cuenta FPS (formato `yuv`: `native` falla en el emulador)
+- [x] Emulador: la webcam como cámara **frontal** (`hw.camera.front=webcam2`, `hw.camera.back=emulated`)
+- [ ] Probar en el teléfono físico y comparar FPS (emulador: 18–21 FPS con la Logitech C270)
+- [ ] Quiz del Hito 2
 
 **Hecho cuando:** ves la cámara en el teléfono y un contador de FPS estable.
 **Aprendes:** permisos de Android, componentes nativos, hilos (UI, JS, cámara), worklets.
