@@ -147,7 +147,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 - [x] Dibujar los puntos y huesos sobre la vista previa (Skia 2.14 + shared values de Reanimated)
 - [x] Puntos en coordenadas verticales (MediaPipe los devuelve en coordenadas del sensor) y cuadros que siguen a la pantalla al girar el teléfono
 - [x] Cámara pausada en segundo plano (`isActive` según `AppState`)
-- [ ] Medir rendimiento (ms por cuadro) en emulador vs teléfono. Teléfono: ~23 FPS, copia 5 ms, MediaPipe ~50 ms
+- [x] Medir rendimiento (ms por cuadro) en emulador vs teléfono. Teléfono: ~23 FPS, copia 5 ms, MediaPipe ~50 ms. Emulador: ~8–11 FPS, copia 7–10 ms, MediaPipe ~70–100 ms
 - [ ] Quiz del Hito 3
 - [ ] *Pendiente para más adelante:* probar el delegado GPU en el teléfono para bajar los ~50 ms de MediaPipe
 
