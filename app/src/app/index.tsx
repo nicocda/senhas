@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
-import { useFpsFrameOutput } from '@/camera/use-fps-frame-output';
+import { HandSkeleton } from '@/camera/hand-skeleton';
+import { useHandTracking } from '@/camera/use-hand-tracking';
+import { useIsForeground } from '@/hooks/use-is-foreground';
 
 export default function CameraScreen() {
   const { hasPermission, canRequestPermission, requestPermission } = useCameraPermission();
@@ -33,7 +35,8 @@ export default function CameraScreen() {
 
 function CameraPreview() {
   const device = useCameraDevice('front');
-  const { frameOutput, fps } = useFpsFrameOutput();
+  const { frameOutput, landmarks, imageSize, stats } = useHandTracking();
+  const isForeground = useIsForeground();
 
   if (device == null) {
     return (
@@ -45,8 +48,17 @@ function CameraPreview() {
 
   return (
     <View style={styles.fill}>
-      <Camera style={styles.fill} device={device} outputs={[frameOutput]} isActive />
-      <Text style={styles.fps}>{fps} FPS</Text>
+      <Camera
+        style={styles.fill}
+        device={device}
+        outputs={[frameOutput]}
+        resizeMode="cover"
+        isActive={isForeground}
+      />
+      <HandSkeleton landmarks={landmarks} imageSize={imageSize} mirrored />
+      <Text style={styles.stats}>
+        {stats.fps} FPS · copia {stats.conversionMs} ms · MediaPipe {stats.inferenceMs} ms
+      </Text>
     </View>
   );
 }
@@ -85,7 +97,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  fps: {
+  stats: {
     position: 'absolute',
     top: 48,
     right: 16,
