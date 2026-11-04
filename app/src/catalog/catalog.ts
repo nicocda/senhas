@@ -1,5 +1,6 @@
 // The catalog lives in ml/ so the app and the Python training read the same file
 // (ADR 0006). Metro resolves files outside the project root since Expo SDK 56.
+import plan from '../../../ml/languages/aed/capture-plan.json';
 import aed from '../../../ml/languages/aed/letters.json';
 
 export type Location = 'neutral' | 'face' | 'body';
@@ -40,6 +41,21 @@ function load(raw: unknown): Catalog {
 }
 
 export const catalog = load(aed);
+
+interface CapturePlan {
+  schemaVersion: number;
+  levels: Record<string, { extraRounds: Record<string, number> } | undefined>;
+}
+
+const capturePlan = plan as CapturePlan;
+
+/**
+ * Extra capture rounds for a letter, written by ml/train.py from how often the last
+ * model got it wrong: hard letters get recorded more.
+ */
+export function extraRounds(entry: CatalogEntry): number {
+  return capturePlan.levels[String(entry.level)]?.extraRounds[entry.id] ?? 0;
+}
 
 export function entriesForLevel(level: number): CatalogEntry[] {
   return catalog.letters.filter((entry) => entry.level === level);

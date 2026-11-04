@@ -37,7 +37,21 @@ Normalización versión 1 (`ml/signs/features.py`):
    y una chica haciendo la misma letra quedan iguales.
 5. **La rotación no se toca.**
 
-El resultado son 63 números. La versión de la normalización va en el `manifest.json` de cada modelo:
+El resultado son 63 números.
+
+**Versión 2 (2026-11-04):** se agrega la **normal de la palma** (3 números más, 66 en total): el
+producto vectorial muñeca→nudillo del índice × muñeca→nudillo del meñique, calculado sobre los puntos
+ya espejados (así un zurdo queda idéntico a un diestro; verificado con diferencia 0 sobre la sesión
+real). Nico notó que la U y la V se distinguen por hacia dónde mira la palma (hacia la persona o
+hacia la cámara). Los puntos ya contenían esa información, pero con pocos datos la red no la
+encontraba. En la primera sesión, la normal separa la U (z ≈ +0,5…+0,95) de la V (z ≈ −0,9) y
+delató una V hecha con la orientación de la U. Exactitud del nivel 1: 78,1% → 80,5%.
+
+**Cuadros quietos:** para las letras estáticas solo se entrena con los cuadros donde la mano no
+cambia de forma (`train.py --still 0.15`): la transición desde la letra anterior enseña cosas falsas
+(65,3% → 78,1% en la primera sesión).
+
+La versión de la normalización va en el `manifest.json` de cada modelo:
 la app tiene que aplicar exactamente los mismos pasos (Hito 5) y rechazar un modelo con otra versión.
 
 **Evaluación:** los cuadros de una misma toma son casi idénticos. Separarlos al azar entre

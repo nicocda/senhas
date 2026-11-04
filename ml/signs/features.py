@@ -7,12 +7,16 @@ that's why the manifest records NORMALIZATION_VERSION.
 import numpy as np
 
 # Bump on any change below: a model only works with the normalization it was trained with.
-NORMALIZATION_VERSION = 1
+# v2: + palm normal (orientation, e.g. U vs V: palm towards the signer or the camera).
+NORMALIZATION_VERSION = 2
 
 POINTS = 21
 WRIST = 0
+INDEX_MCP = 5
 MIDDLE_MCP = 9
-FEATURES = POINTS * 3
+PINKY_MCP = 17
+POINT_FEATURES = POINTS * 3  # the 21 points; the palm normal comes after them
+FEATURES = POINT_FEATURES + 3
 
 
 def normalize_hand(world: list[float], dominant_hand: str) -> np.ndarray | None:
@@ -27,6 +31,9 @@ def normalize_hand(world: list[float], dominant_hand: str) -> np.ndarray | None:
       hand doing the same letter look the same.
     - Left-handed people: mirrored on x, so every sample looks like a right hand.
     - No rotation normalization, on purpose (see above).
+    - Plus the palm normal (unit vector, 3 numbers): which way the palm faces. The
+      points already contain it, but spelled out a small network learns it with
+      far fewer examples.
     """
     points = np.asarray(world, dtype=np.float32).reshape(POINTS, 3)
     points = points - points[WRIST]
@@ -35,4 +42,11 @@ def normalize_hand(world: list[float], dominant_hand: str) -> np.ndarray | None:
     scale = float(np.linalg.norm(points[MIDDLE_MCP]))
     if scale < 1e-6:
         return None
-    return (points / scale).reshape(FEATURES)
+    points = points / scale
+    # Computed on the already mirrored points, which have the shape of a right hand:
+    # "palm towards the camera" points the same way for right- and left-handed people.
+    normal = np.cross(points[INDEX_MCP], points[PINKY_MCP])
+    length = float(np.linalg.norm(normal))
+    if length < 1e-6:
+        return None
+    return np.concatenate([points.reshape(POINT_FEATURES), normal / length]).astype(np.float32)

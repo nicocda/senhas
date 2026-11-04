@@ -77,6 +77,12 @@ def main() -> None:
     parser.add_argument("--level", type=int, default=1)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument(
+        "--still",
+        type=float,
+        metavar="THRESHOLD",
+        help="only frames where the hand is still (change per frame below THRESHOLD, e.g. 0.15)",
+    )
     parser.add_argument("--data-dir", type=Path, help="default: languages/<language>/data")
     parser.add_argument("--out-dir", type=Path, help="default: languages/<language>/models/level-<n>")
     args = parser.parse_args()
@@ -86,7 +92,7 @@ def main() -> None:
     labels = [entry.id for entry in entries]
     data_dir = args.data_dir or LANGUAGES_DIR / args.language / "data"
     sessions = load_sessions(data_dir)
-    samples = samples_from_sessions(sessions, entries)
+    samples = samples_from_sessions(sessions, entries, args.still)
     if not samples:
         raise SystemExit(f"No samples for level {args.level} in {data_dir}")
 
@@ -121,6 +127,11 @@ def main() -> None:
     print(classification_report(all_true, all_pred, labels=range(len(labels)), target_names=labels, zero_division=0))
 
     matrix = confusion_matrix(all_true, all_pred, labels=range(len(labels)))
+    # Recall: of the frames of each letter, how many the model got right.
+    recall = {
+        label: float(matrix[i, i] / matrix[i].sum()) if matrix[i].sum() else 0.0
+        for i, label in enumerate(labels)
+    }
     print("Most confused pairs (true -> predicted):")
     pairs = [
         (int(matrix[i, j]), labels[i], labels[j])
@@ -166,13 +177,41 @@ def main() -> None:
         "letters": [entry.letter for entry in entries],
         "normalization": {"version": NORMALIZATION_VERSION, "input": "worldLandmarks", "features": FEATURES},
         "model": {"file": "model.tflite", "sha256": hashlib.sha256(tflite).hexdigest(), "bytes": len(tflite)},
-        "evaluation": {"strategy": strategy, "accuracy": accuracy, "folds": fold_scores},
-        "data": {"sessions": len(sessions), "people": len(participants), "frames": len(samples)},
+        "evaluation": {"strategy": strategy, "accuracy": accuracy, "folds": fold_scores, "recall": recall},
+        "data": {
+            "sessions": len(sessions),
+            "people": len(participants),
+            "frames": len(samples),
+            "stillThreshold": args.still,
+        },
         "trainedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_capture_plan(args.language, args.level, recall, accuracy)
     print(f"Model: {out_dir}\nRun:   {run_dir}")
+
+
+# Letters the model gets wrong more often get more rounds in the next capture sessions.
+EXTRA_ROUNDS = [(0.5, 2), (0.85, 1)]  # (recall below, extra rounds)
+
+
+def write_capture_plan(language: str, level: int, recall: dict[str, float], accuracy: float) -> None:
+    """ml/languages/<language>/capture-plan.json, read by the app's capture screen.
+    Only per-letter numbers: no data about people."""
+    path = LANGUAGES_DIR / language / "capture-plan.json"
+    plan = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"schemaVersion": 1, "levels": {}}
+    extra = {}
+    for label, value in recall.items():
+        rounds = next((rounds for below, rounds in EXTRA_ROUNDS if value < below), 0)
+        if rounds:
+            extra[label] = rounds
+    plan["levels"][str(level)] = {
+        "extraRounds": extra,
+        "basedOn": {"accuracy": round(accuracy, 3), "trainedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z")},
+    }
+    path.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print("Extra rounds for the next sessions:", ", ".join(f"{k}+{v}" for k, v in extra.items()) or "none")
 
 
 if __name__ == "__main__":
