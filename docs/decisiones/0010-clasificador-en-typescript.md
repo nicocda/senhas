@@ -35,6 +35,13 @@ cuadro.
 - **Suavizado:** se vota entre los últimos 10 cuadros (~0,7 s). La letra se muestra solo si gana al
   menos 6 de 10 votos, con confianza media de 60% o más; si no, aparece "¿…?".
 
+**Un solo modelo (2026-11-04):** `train.py --level static` entrena las 21 letras estáticas de una mano
+juntas (niveles 1 y 2), y la app lo usa por defecto ("Todas las letras"). Usa la ubicación solo si
+**todas** las tomas tienen la cara: mezclar tomas con y sin cara le enseñaría al modelo que "sin
+cara" significa ciertas letras. Por eso la captura ahora enciende la cara en todos los niveles.
+Al evaluar, se deja afuera una persona por vez solo si cada persona tiene todas las letras; si no,
+una ronda.
+
 ## Verificación
 
 - La salida de TypeScript coincide con la del `.tflite`: la misma letra en **2578/2578** cuadros
