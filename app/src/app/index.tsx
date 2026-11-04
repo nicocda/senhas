@@ -5,8 +5,8 @@ import { Button } from '@/components/button';
 import { toggleDebugMode } from '@/debug/debug-log';
 
 const LEVELS = [1, 2, 3, 4] as const;
-/** Levels 2-4 need the face reference and the glove first (etapas 4.3 y 4.5). */
-const ENABLED_LEVELS = new Set<number>([1]);
+/** Level 2 records the face reference too; levels 3-4 (movement, two hands) aren't ready yet. */
+const ENABLED_LEVELS = new Set<number>([1, 2]);
 
 /**
  * Home menu. The camera only starts inside the screens that need it, so the
@@ -28,7 +28,7 @@ export default function MenuScreen() {
 
       <View style={styles.section}>
         <Text style={styles.heading}>Grabar datos</Text>
-        <Text style={styles.hint}>Por ahora, solo el nivel 1</Text>
+        <Text style={styles.hint}>Por ahora, los niveles 1 y 2</Text>
         <View style={styles.levels}>
           {LEVELS.map((level) => (
             <View key={level} style={styles.level}>
