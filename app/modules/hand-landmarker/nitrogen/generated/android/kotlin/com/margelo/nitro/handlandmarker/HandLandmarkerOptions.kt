@@ -29,7 +29,10 @@ data class HandLandmarkerOptions(
   val minHandPresenceConfidence: Double,
   @DoNotStrip
   @Keep
-  val minTrackingConfidence: Double
+  val minTrackingConfidence: Double,
+  @DoNotStrip
+  @Keep
+  val bodyReference: BodyReferenceKind
 ) {
   /* primary constructor */
 
@@ -40,6 +43,7 @@ data class HandLandmarkerOptions(
       && Objects.deepEquals(this.minHandDetectionConfidence, other.minHandDetectionConfidence)
       && Objects.deepEquals(this.minHandPresenceConfidence, other.minHandPresenceConfidence)
       && Objects.deepEquals(this.minTrackingConfidence, other.minTrackingConfidence)
+      && Objects.deepEquals(this.bodyReference, other.bodyReference)
   }
 
   override fun hashCode(): Int {
@@ -47,7 +51,8 @@ data class HandLandmarkerOptions(
       numHands,
       minHandDetectionConfidence,
       minHandPresenceConfidence,
-      minTrackingConfidence
+      minTrackingConfidence,
+      bodyReference
     ).contentDeepHashCode()
   }
 
@@ -59,8 +64,8 @@ data class HandLandmarkerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(numHands: Double, minHandDetectionConfidence: Double, minHandPresenceConfidence: Double, minTrackingConfidence: Double): HandLandmarkerOptions {
-      return HandLandmarkerOptions(numHands, minHandDetectionConfidence, minHandPresenceConfidence, minTrackingConfidence)
+    private fun fromCpp(numHands: Double, minHandDetectionConfidence: Double, minHandPresenceConfidence: Double, minTrackingConfidence: Double, bodyReference: BodyReferenceKind): HandLandmarkerOptions {
+      return HandLandmarkerOptions(numHands, minHandDetectionConfidence, minHandPresenceConfidence, minTrackingConfidence, bodyReference)
     }
   }
 }

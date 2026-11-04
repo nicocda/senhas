@@ -47,6 +47,10 @@ namespace margelo::nitro::handlandmarker {
       double conversionMs = this->getFieldValue(fieldConversionMs);
       static const auto fieldInferenceMs = clazz->getField<double>("inferenceMs");
       double inferenceMs = this->getFieldValue(fieldInferenceMs);
+      static const auto fieldBody = clazz->getField<jni::JArrayClass<JLandmark>>("body");
+      jni::local_ref<jni::JArrayClass<JLandmark>> body = this->getFieldValue(fieldBody);
+      static const auto fieldBodyMs = clazz->getField<double>("bodyMs");
+      double bodyMs = this->getFieldValue(fieldBodyMs);
       return HandDetection(
         [&](auto&& __input) {
           size_t __size = __input->size();
@@ -61,7 +65,18 @@ namespace margelo::nitro::handlandmarker {
         imageWidth,
         imageHeight,
         conversionMs,
-        inferenceMs
+        inferenceMs,
+        [&](auto&& __input) {
+          size_t __size = __input->size();
+          std::vector<Landmark> __vector;
+          __vector.reserve(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            auto __element = __input->getElement(__i);
+            __vector.push_back(__element->toCpp());
+          }
+          return __vector;
+        }(body),
+        bodyMs
       );
     }
 
@@ -71,7 +86,7 @@ namespace margelo::nitro::handlandmarker {
      */
     [[maybe_unused]]
     static jni::local_ref<JHandDetection::javaobject> fromCpp(const HandDetection& value) {
-      using JSignature = JHandDetection(jni::alias_ref<jni::JArrayClass<JDetectedHand>>, double, double, double, double);
+      using JSignature = JHandDetection(jni::alias_ref<jni::JArrayClass<JDetectedHand>>, double, double, double, double, jni::alias_ref<jni::JArrayClass<JLandmark>>, double);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -89,7 +104,18 @@ namespace margelo::nitro::handlandmarker {
         value.imageWidth,
         value.imageHeight,
         value.conversionMs,
-        value.inferenceMs
+        value.inferenceMs,
+        [&](auto&& __input) {
+          size_t __size = __input.size();
+          jni::local_ref<jni::JArrayClass<JLandmark>> __array = jni::JArrayClass<JLandmark>::newArray(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            const auto& __element = __input[__i];
+            auto __elementJni = JLandmark::fromCpp(__element);
+            __array->setElement(__i, *__elementJni);
+          }
+          return __array;
+        }(value.body),
+        value.bodyMs
       );
     }
   };

@@ -28,24 +28,39 @@ def getExtOrIntegerDefault(name) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["HandLandmarker_" + name]).toInteger()
 }
 
-// MediaPipe model, pinned and verified. Downloaded at build time (like Google's official
-// sample) instead of committing a 7.8 MB binary whose license isn't stated.
-def modelUrl = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
-def modelSha256 = "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1"
+// MediaPipe models, pinned to version 1 and verified. Downloaded at build time (like Google's
+// official samples) instead of committing binaries whose license isn't stated.
+// The docs link ".../latest/..."; "1" was identical on 2026-11-04 and doesn't change silently.
+def mediapipeModels = [
+  "hand_landmarker.task": [
+    url: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+    sha256: "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1",
+  ],
+  // Body reference candidates (etapa 4.3): 6 face keypoints, or the upper body of a pose.
+  "blaze_face_short_range.tflite": [
+    url: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
+    sha256: "b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f",
+  ],
+  "pose_landmarker_lite.task": [
+    url: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+    sha256: "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
+  ],
+]
 def modelAssetsDir = layout.buildDirectory.dir("generated/mediapipe-assets").get().asFile
 
-def downloadModel = tasks.register("downloadHandLandmarkerModel") {
-  inputs.property("url", modelUrl)
-  inputs.property("sha256", modelSha256)
-  outputs.file(new File(modelAssetsDir, "hand_landmarker.task"))
+def downloadModel = tasks.register("downloadMediaPipeModels") {
+  inputs.property("models", mediapipeModels.toString())
+  mediapipeModels.keySet().each { name -> outputs.file(new File(modelAssetsDir, name)) }
   doLast {
-    def file = new File(modelAssetsDir, "hand_landmarker.task")
-    file.parentFile.mkdirs()
-    URI.create(modelUrl).toURL().withInputStream { input -> file.withOutputStream { it << input } }
-    def actual = MessageDigest.getInstance("SHA-256").digest(file.bytes).encodeHex().toString()
-    if (actual != modelSha256) {
-      file.delete()
-      throw new GradleException("hand_landmarker.task SHA-256 mismatch: expected ${modelSha256}, got ${actual}")
+    mediapipeModels.each { name, model ->
+      def file = new File(modelAssetsDir, name)
+      file.parentFile.mkdirs()
+      URI.create(model.url).toURL().withInputStream { input -> file.withOutputStream { it << input } }
+      def actual = MessageDigest.getInstance("SHA-256").digest(file.bytes).encodeHex().toString()
+      if (actual != model.sha256) {
+        file.delete()
+        throw new GradleException("${name} SHA-256 mismatch: expected ${model.sha256}, got ${actual}")
+      }
     }
   }
 }

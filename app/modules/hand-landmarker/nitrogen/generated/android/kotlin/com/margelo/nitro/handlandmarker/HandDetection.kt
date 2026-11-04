@@ -32,7 +32,13 @@ data class HandDetection(
   val conversionMs: Double,
   @DoNotStrip
   @Keep
-  val inferenceMs: Double
+  val inferenceMs: Double,
+  @DoNotStrip
+  @Keep
+  val body: Array<Landmark>,
+  @DoNotStrip
+  @Keep
+  val bodyMs: Double
 ) {
   /* primary constructor */
 
@@ -44,6 +50,8 @@ data class HandDetection(
       && Objects.deepEquals(this.imageHeight, other.imageHeight)
       && Objects.deepEquals(this.conversionMs, other.conversionMs)
       && Objects.deepEquals(this.inferenceMs, other.inferenceMs)
+      && Objects.deepEquals(this.body, other.body)
+      && Objects.deepEquals(this.bodyMs, other.bodyMs)
   }
 
   override fun hashCode(): Int {
@@ -52,7 +60,9 @@ data class HandDetection(
       imageWidth,
       imageHeight,
       conversionMs,
-      inferenceMs
+      inferenceMs,
+      body,
+      bodyMs
     ).contentDeepHashCode()
   }
 
@@ -64,8 +74,8 @@ data class HandDetection(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(hands: Array<DetectedHand>, imageWidth: Double, imageHeight: Double, conversionMs: Double, inferenceMs: Double): HandDetection {
-      return HandDetection(hands, imageWidth, imageHeight, conversionMs, inferenceMs)
+    private fun fromCpp(hands: Array<DetectedHand>, imageWidth: Double, imageHeight: Double, conversionMs: Double, inferenceMs: Double, body: Array<Landmark>, bodyMs: Double): HandDetection {
+      return HandDetection(hands, imageWidth, imageHeight, conversionMs, inferenceMs, body, bodyMs)
     }
   }
 }

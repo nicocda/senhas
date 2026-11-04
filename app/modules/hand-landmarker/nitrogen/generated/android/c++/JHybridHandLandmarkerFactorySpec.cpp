@@ -11,12 +11,16 @@
 namespace margelo::nitro::handlandmarker { class HybridHandLandmarkerSpec; }
 // Forward declaration of `HandLandmarkerOptions` to properly resolve imports.
 namespace margelo::nitro::handlandmarker { struct HandLandmarkerOptions; }
+// Forward declaration of `BodyReferenceKind` to properly resolve imports.
+namespace margelo::nitro::handlandmarker { enum class BodyReferenceKind; }
 
 #include <memory>
 #include "HybridHandLandmarkerSpec.hpp"
 #include "JHybridHandLandmarkerSpec.hpp"
 #include "HandLandmarkerOptions.hpp"
 #include "JHandLandmarkerOptions.hpp"
+#include "BodyReferenceKind.hpp"
+#include "JBodyReferenceKind.hpp"
 
 namespace margelo::nitro::handlandmarker {
 

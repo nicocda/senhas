@@ -10,7 +10,8 @@
 #include <fbjni/fbjni.h>
 #include "HandLandmarkerOptions.hpp"
 
-
+#include "BodyReferenceKind.hpp"
+#include "JBodyReferenceKind.hpp"
 
 namespace margelo::nitro::handlandmarker {
 
@@ -39,11 +40,14 @@ namespace margelo::nitro::handlandmarker {
       double minHandPresenceConfidence = this->getFieldValue(fieldMinHandPresenceConfidence);
       static const auto fieldMinTrackingConfidence = clazz->getField<double>("minTrackingConfidence");
       double minTrackingConfidence = this->getFieldValue(fieldMinTrackingConfidence);
+      static const auto fieldBodyReference = clazz->getField<JBodyReferenceKind>("bodyReference");
+      jni::local_ref<JBodyReferenceKind> bodyReference = this->getFieldValue(fieldBodyReference);
       return HandLandmarkerOptions(
         numHands,
         minHandDetectionConfidence,
         minHandPresenceConfidence,
-        minTrackingConfidence
+        minTrackingConfidence,
+        bodyReference->toCpp()
       );
     }
 
@@ -53,7 +57,7 @@ namespace margelo::nitro::handlandmarker {
      */
     [[maybe_unused]]
     static jni::local_ref<JHandLandmarkerOptions::javaobject> fromCpp(const HandLandmarkerOptions& value) {
-      using JSignature = JHandLandmarkerOptions(double, double, double, double);
+      using JSignature = JHandLandmarkerOptions(double, double, double, double, jni::alias_ref<JBodyReferenceKind>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -61,7 +65,8 @@ namespace margelo::nitro::handlandmarker {
         value.numHands,
         value.minHandDetectionConfidence,
         value.minHandPresenceConfidence,
-        value.minTrackingConfidence
+        value.minTrackingConfidence,
+        JBodyReferenceKind::fromCpp(value.bodyReference)
       );
     }
   };

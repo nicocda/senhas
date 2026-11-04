@@ -28,9 +28,10 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `BodyReferenceKind` to properly resolve imports.
+namespace margelo::nitro::handlandmarker { enum class BodyReferenceKind; }
 
-
-
+#include "BodyReferenceKind.hpp"
 
 namespace margelo::nitro::handlandmarker {
 
@@ -43,10 +44,11 @@ namespace margelo::nitro::handlandmarker {
     double minHandDetectionConfidence     SWIFT_PRIVATE;
     double minHandPresenceConfidence     SWIFT_PRIVATE;
     double minTrackingConfidence     SWIFT_PRIVATE;
+    BodyReferenceKind bodyReference     SWIFT_PRIVATE;
 
   public:
     HandLandmarkerOptions() = default;
-    explicit HandLandmarkerOptions(double numHands, double minHandDetectionConfidence, double minHandPresenceConfidence, double minTrackingConfidence): numHands(numHands), minHandDetectionConfidence(minHandDetectionConfidence), minHandPresenceConfidence(minHandPresenceConfidence), minTrackingConfidence(minTrackingConfidence) {}
+    explicit HandLandmarkerOptions(double numHands, double minHandDetectionConfidence, double minHandPresenceConfidence, double minTrackingConfidence, BodyReferenceKind bodyReference): numHands(numHands), minHandDetectionConfidence(minHandDetectionConfidence), minHandPresenceConfidence(minHandPresenceConfidence), minTrackingConfidence(minTrackingConfidence), bodyReference(bodyReference) {}
 
   public:
     friend bool operator==(const HandLandmarkerOptions& lhs, const HandLandmarkerOptions& rhs) = default;
@@ -65,7 +67,8 @@ namespace margelo::nitro {
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "numHands"))),
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "minHandDetectionConfidence"))),
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "minHandPresenceConfidence"))),
-        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "minTrackingConfidence")))
+        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "minTrackingConfidence"))),
+        JSIConverter<margelo::nitro::handlandmarker::BodyReferenceKind>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyReference")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::handlandmarker::HandLandmarkerOptions& arg) {
@@ -74,6 +77,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "minHandDetectionConfidence"), JSIConverter<double>::toJSI(runtime, arg.minHandDetectionConfidence));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "minHandPresenceConfidence"), JSIConverter<double>::toJSI(runtime, arg.minHandPresenceConfidence));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "minTrackingConfidence"), JSIConverter<double>::toJSI(runtime, arg.minTrackingConfidence));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "bodyReference"), JSIConverter<margelo::nitro::handlandmarker::BodyReferenceKind>::toJSI(runtime, arg.bodyReference));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -88,6 +92,7 @@ namespace margelo::nitro {
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "minHandDetectionConfidence")))) return false;
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "minHandPresenceConfidence")))) return false;
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "minTrackingConfidence")))) return false;
+      if (!JSIConverter<margelo::nitro::handlandmarker::BodyReferenceKind>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyReference")))) return false;
       return true;
     }
   };

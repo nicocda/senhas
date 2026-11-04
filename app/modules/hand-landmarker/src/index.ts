@@ -13,7 +13,7 @@ export type {
   Handedness,
   Landmark,
 } from './specs/HandLandmarker.nitro';
-export type { HandLandmarkerOptions } from './specs/HandLandmarkerFactory.nitro';
+export type { BodyReferenceKind, HandLandmarkerOptions } from './specs/HandLandmarkerFactory.nitro';
 
 const DEFAULT_OPTIONS: HandLandmarkerOptions = {
   // Two hands cost almost twice as much: the landmarks model runs once per hand,
@@ -23,6 +23,8 @@ const DEFAULT_OPTIONS: HandLandmarkerOptions = {
   minHandDetectionConfidence: 0.5,
   minHandPresenceConfidence: 0.5,
   minTrackingConfidence: 0.5,
+  // Off by default: it's an extra model per frame. Letters signed on the face need it.
+  bodyReference: 'none',
 };
 
 const factory = NitroModules.createHybridObject<HandLandmarkerFactory>('HandLandmarkerFactory');

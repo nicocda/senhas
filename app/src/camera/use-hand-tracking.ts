@@ -1,4 +1,4 @@
-import { createHandLandmarker, type DetectedHand } from 'hand-landmarker';
+import { type BodyReferenceKind, createHandLandmarker, type DetectedHand } from 'hand-landmarker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 import { useFrameOutput } from 'react-native-vision-camera';
@@ -13,8 +13,18 @@ export interface TrackingStats {
   fps: number;
   /** Average native time per frame copying it into a Bitmap. */
   conversionMs: number;
-  /** Average native time per frame in MediaPipe. */
+  /** Average native time per frame in MediaPipe's hand model. */
   inferenceMs: number;
+  /** Average native time per frame in the body reference model (0 if disabled). */
+  bodyMs: number;
+}
+
+const EMPTY_STATS: TrackingStats = { fps: 0, conversionMs: 0, inferenceMs: 0, bodyMs: 0 };
+
+export interface HandTrackingOptions {
+  numHands?: 1 | 2;
+  /** Face or upper-body points, to place the hand relative to the body (etapa 4.3). */
+  bodyReference?: BodyReferenceKind;
 }
 
 /**
@@ -23,10 +33,16 @@ export interface TrackingStats {
  * Landmarks go to a shared value so the overlay can redraw on the UI thread
  * without a React render; stats reach React only once per second.
  */
-export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
-  // MediaPipe can't change numHands on a live landmarker, so a new value creates a
-  // new one; the effect below disposes the old one.
-  const landmarker = useMemo(() => createHandLandmarker({ numHands }), [numHands]);
+export function useHandTracking({
+  numHands = 1,
+  bodyReference = 'none',
+}: HandTrackingOptions = {}) {
+  // MediaPipe can't change its options on a live landmarker, so a new value creates
+  // a new one; the effect below disposes the old one.
+  const landmarker = useMemo(
+    () => createHandLandmarker({ numHands, bodyReference }),
+    [numHands, bodyReference],
+  );
   useEffect(() => () => landmarker.dispose(), [landmarker]);
 
   /**
@@ -34,13 +50,15 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
    * to the upright image. Empty: no hand.
    */
   const landmarks = useSharedValue<number[]>([]);
+  /** Flat [x0, y0, ...] of the body reference points. Empty: disabled or not found. */
+  const body = useSharedValue<number[]>([]);
   const imageSize = useSharedValue({ width: 0, height: 0 });
-  const [stats, setStats] = useState<TrackingStats>({ fps: 0, conversionMs: 0, inferenceMs: 0 });
+  const [stats, setStats] = useState<TrackingStats>(EMPTY_STATS);
 
   // Worklet closures are copied to the camera thread, so a plain variable would
   // reset on every frame. A Synchronizable keeps state across frames.
   const window = useMemo(
-    () => createSynchronizable({ frames: 0, conversionMs: 0, inferenceMs: 0, windowStart: 0 }),
+    () => createSynchronizable({ ...EMPTY_STATS, frames: 0, windowStart: 0 }),
     [],
   );
 
@@ -50,12 +68,15 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
   const recording = useSharedValue(false);
   const take = useRef<{ startedAt: number; frames: RecordedFrame[] } | null>(null);
 
-  const appendFrame = useCallback((timestamp: number, hands: RecordedHand[]) => {
-    const current = take.current;
-    if (current != null) {
-      current.frames.push({ t: timestamp - current.startedAt, hands });
-    }
-  }, []);
+  const appendFrame = useCallback(
+    (timestamp: number, hands: RecordedHand[], bodyPoints: number[]) => {
+      const current = take.current;
+      if (current != null) {
+        current.frames.push({ t: timestamp - current.startedAt, hands, body: bodyPoints });
+      }
+    },
+    [],
+  );
 
   // Stable identities: screens use these in effect dependencies (timers).
   const startRecording = useCallback(() => {
@@ -86,6 +107,7 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
         landmarks.value = detection.hands.flatMap((hand) =>
           hand.landmarks.flatMap((point) => [point.x, point.y]),
         );
+        body.value = detection.body.flatMap((point) => [point.x, point.y]);
         if (
           imageSize.value.width !== detection.imageWidth ||
           imageSize.value.height !== detection.imageHeight
@@ -95,29 +117,35 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
 
         const now = Date.now();
         if (recording.value) {
-          scheduleOnRN(appendFrame, now, detection.hands.map(toRecordedHand));
+          scheduleOnRN(
+            appendFrame,
+            now,
+            detection.hands.map(toRecordedHand),
+            detection.body.flatMap((point) => [round(point.x), round(point.y), round(point.z)]),
+          );
         }
 
         const current = window.getDirty();
-        const frames = current.frames + 1;
-        const conversionMs = current.conversionMs + detection.conversionMs;
-        const inferenceMs = current.inferenceMs + detection.inferenceMs;
+        const next = {
+          frames: current.frames + 1,
+          conversionMs: current.conversionMs + detection.conversionMs,
+          inferenceMs: current.inferenceMs + detection.inferenceMs,
+          bodyMs: current.bodyMs + detection.bodyMs,
+          fps: 0,
+          windowStart: current.windowStart,
+        };
         if (current.windowStart === 0) {
-          window.setBlocking({ frames: 0, conversionMs: 0, inferenceMs: 0, windowStart: now });
+          window.setBlocking({ ...EMPTY_STATS, frames: 0, windowStart: now });
         } else if (now - current.windowStart >= STATS_WINDOW_MS) {
           scheduleOnRN(setStats, {
-            fps: Math.round((frames * 1000) / (now - current.windowStart)),
-            conversionMs: Math.round(conversionMs / frames),
-            inferenceMs: Math.round(inferenceMs / frames),
+            fps: Math.round((next.frames * 1000) / (now - current.windowStart)),
+            conversionMs: Math.round(next.conversionMs / next.frames),
+            inferenceMs: Math.round(next.inferenceMs / next.frames),
+            bodyMs: Math.round(next.bodyMs / next.frames),
           });
-          window.setBlocking({ frames: 0, conversionMs: 0, inferenceMs: 0, windowStart: now });
+          window.setBlocking({ ...EMPTY_STATS, frames: 0, windowStart: now });
         } else {
-          window.setBlocking({
-            frames,
-            conversionMs,
-            inferenceMs,
-            windowStart: current.windowStart,
-          });
+          window.setBlocking(next);
         }
       } finally {
         frame.dispose();
@@ -125,7 +153,7 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
     },
   });
 
-  return { frameOutput, landmarks, imageSize, stats, startRecording, stopRecording };
+  return { frameOutput, landmarks, body, imageSize, stats, startRecording, stopRecording };
 }
 
 /** 5 decimals: well below a pixel in normalized coordinates, and 0.01 mm in world ones. */

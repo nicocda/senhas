@@ -30,9 +30,12 @@
 
 // Forward declaration of `DetectedHand` to properly resolve imports.
 namespace margelo::nitro::handlandmarker { struct DetectedHand; }
+// Forward declaration of `Landmark` to properly resolve imports.
+namespace margelo::nitro::handlandmarker { struct Landmark; }
 
 #include "DetectedHand.hpp"
 #include <vector>
+#include "Landmark.hpp"
 
 namespace margelo::nitro::handlandmarker {
 
@@ -46,10 +49,12 @@ namespace margelo::nitro::handlandmarker {
     double imageHeight     SWIFT_PRIVATE;
     double conversionMs     SWIFT_PRIVATE;
     double inferenceMs     SWIFT_PRIVATE;
+    std::vector<Landmark> body     SWIFT_PRIVATE;
+    double bodyMs     SWIFT_PRIVATE;
 
   public:
     HandDetection() = default;
-    explicit HandDetection(std::vector<DetectedHand> hands, double imageWidth, double imageHeight, double conversionMs, double inferenceMs): hands(hands), imageWidth(imageWidth), imageHeight(imageHeight), conversionMs(conversionMs), inferenceMs(inferenceMs) {}
+    explicit HandDetection(std::vector<DetectedHand> hands, double imageWidth, double imageHeight, double conversionMs, double inferenceMs, std::vector<Landmark> body, double bodyMs): hands(hands), imageWidth(imageWidth), imageHeight(imageHeight), conversionMs(conversionMs), inferenceMs(inferenceMs), body(body), bodyMs(bodyMs) {}
 
   public:
     friend bool operator==(const HandDetection& lhs, const HandDetection& rhs) = default;
@@ -69,7 +74,9 @@ namespace margelo::nitro {
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageWidth"))),
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageHeight"))),
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "conversionMs"))),
-        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "inferenceMs")))
+        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "inferenceMs"))),
+        JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "body"))),
+        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyMs")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::handlandmarker::HandDetection& arg) {
@@ -79,6 +86,8 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "imageHeight"), JSIConverter<double>::toJSI(runtime, arg.imageHeight));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "conversionMs"), JSIConverter<double>::toJSI(runtime, arg.conversionMs));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "inferenceMs"), JSIConverter<double>::toJSI(runtime, arg.inferenceMs));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "body"), JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::toJSI(runtime, arg.body));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "bodyMs"), JSIConverter<double>::toJSI(runtime, arg.bodyMs));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -94,6 +103,8 @@ namespace margelo::nitro {
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageHeight")))) return false;
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "conversionMs")))) return false;
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "inferenceMs")))) return false;
+      if (!JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "body")))) return false;
+      if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyMs")))) return false;
       return true;
     }
   };

@@ -43,11 +43,12 @@ export function CameraPermissionGate({ children }: { children: ReactNode }) {
 interface HandCameraProps {
   frameOutput: CameraFrameOutput;
   landmarks: SharedValue<number[]>;
+  body?: SharedValue<number[]>;
   imageSize: SharedValue<{ width: number; height: number }>;
 }
 
-/** Front camera preview with the detected hands drawn on top. */
-export function HandCamera({ frameOutput, landmarks, imageSize }: HandCameraProps) {
+/** Front camera preview with the detected hands (and body reference) drawn on top. */
+export function HandCamera({ frameOutput, landmarks, body, imageSize }: HandCameraProps) {
   const device = useCameraDevice('front');
   const isForeground = useIsForeground();
 
@@ -71,7 +72,7 @@ export function HandCamera({ frameOutput, landmarks, imageSize }: HandCameraProp
         orientationSource="interface"
         isActive={isForeground}
       />
-      <HandSkeleton landmarks={landmarks} imageSize={imageSize} mirrored />
+      <HandSkeleton landmarks={landmarks} body={body} imageSize={imageSize} mirrored />
     </View>
   );
 }
