@@ -4,6 +4,7 @@ import android.graphics.PixelFormat
 import android.os.SystemClock
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import com.google.mediapipe.tasks.components.containers.Landmark as MediaPipeLandmark
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
@@ -69,6 +70,7 @@ class HybridHandLandmarker(
           val category = result.handedness()[i].first()
           DetectedHand(
             landmarks = points.map { it.toUpright(rotationDegrees) }.toTypedArray(),
+            worldLandmarks = result.worldLandmarks()[i].map { it.toUpright(rotationDegrees) }.toTypedArray(),
             handedness = if (category.categoryName() == "Left") Handedness.LEFT else Handedness.RIGHT,
             score = category.score().toDouble(),
           )
@@ -98,6 +100,23 @@ class HybridHandLandmarker(
       90 -> Landmark(1 - y, x, z)
       180 -> Landmark(1 - x, 1 - y, z)
       270 -> Landmark(y, 1 - x, z)
+      else -> Landmark(x, y, z)
+    }
+  }
+
+  /**
+   * World landmarks are rotated with the same hand rect as the normalized ones
+   * (MediaPipe's WorldLandmarkProjectionCalculator), so they are also in sensor
+   * orientation. They are centered on the hand, so the rotation has no `1 -` offset.
+   */
+  private fun MediaPipeLandmark.toUpright(rotationDegrees: Int): Landmark {
+    val x = x().toDouble()
+    val y = y().toDouble()
+    val z = z().toDouble()
+    return when (rotationDegrees) {
+      90 -> Landmark(-y, x, z)
+      180 -> Landmark(-x, -y, z)
+      270 -> Landmark(y, -x, z)
       else -> Landmark(x, y, z)
     }
   }

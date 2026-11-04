@@ -45,12 +45,13 @@ namespace margelo::nitro::handlandmarker {
   struct DetectedHand final {
   public:
     std::vector<Landmark> landmarks     SWIFT_PRIVATE;
+    std::vector<Landmark> worldLandmarks     SWIFT_PRIVATE;
     Handedness handedness     SWIFT_PRIVATE;
     double score     SWIFT_PRIVATE;
 
   public:
     DetectedHand() = default;
-    explicit DetectedHand(std::vector<Landmark> landmarks, Handedness handedness, double score): landmarks(landmarks), handedness(handedness), score(score) {}
+    explicit DetectedHand(std::vector<Landmark> landmarks, std::vector<Landmark> worldLandmarks, Handedness handedness, double score): landmarks(landmarks), worldLandmarks(worldLandmarks), handedness(handedness), score(score) {}
 
   public:
     friend bool operator==(const DetectedHand& lhs, const DetectedHand& rhs) = default;
@@ -67,6 +68,7 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::handlandmarker::DetectedHand(
         JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "landmarks"))),
+        JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "worldLandmarks"))),
         JSIConverter<margelo::nitro::handlandmarker::Handedness>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "handedness"))),
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "score")))
       );
@@ -74,6 +76,7 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::handlandmarker::DetectedHand& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "landmarks"), JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::toJSI(runtime, arg.landmarks));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "worldLandmarks"), JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::toJSI(runtime, arg.worldLandmarks));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "handedness"), JSIConverter<margelo::nitro::handlandmarker::Handedness>::toJSI(runtime, arg.handedness));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "score"), JSIConverter<double>::toJSI(runtime, arg.score));
       return obj;
@@ -87,6 +90,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "landmarks")))) return false;
+      if (!JSIConverter<std::vector<margelo::nitro::handlandmarker::Landmark>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "worldLandmarks")))) return false;
       if (!JSIConverter<margelo::nitro::handlandmarker::Handedness>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "handedness")))) return false;
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "score")))) return false;
       return true;
