@@ -180,9 +180,9 @@ se confirma en la etapa 4.2):
 
 #### Etapa 4.2 — Estudiar el alfabeto y armar el catálogo
 
-- [ ] Aprender los parámetros de una seña (configuración, orientación, ubicación, movimiento, rasgos no manuales) → notas en `docs/aprendizaje/`
-- [ ] Confirmar la clasificación de las 28 letras con el video de la CAS (hay discrepancias, p. ej. J y Q)
-- [ ] **Paquete de lengua** `ml/languages/aed/` (ISO 639-3 de la LSA) con `letters.json`: letra, nivel, manos, movimiento, ubicación y color del guante. El entrenamiento **genera** el `manifest.json` (labels en orden, hash del modelo, versión de normalización) junto al `.tflite`. Va en un ADR
+- [x] Aprender los parámetros de una seña (configuración, orientación, ubicación, movimiento, rasgos no manuales) y qué ve nuestro sistema de cada uno → [notas](aprendizaje/parametros-de-la-sena.md)
+- [ ] **(Nico)** Confirmar la clasificación de las 28 letras con el video de la CAS (hay discrepancias, p. ej. J y Q) y marcar `verified: true` en `letters.json`. La lista para revisar está en las [notas](aprendizaje/parametros-de-la-sena.md#para-confirmar-con-el-video-de-la-cas)
+- [x] **Paquete de lengua** `ml/languages/aed/` (ISO 639-3 de la LSA) con [`letters.json`](../ml/languages/aed/letters.json): letra, nivel, manos, movimiento, ubicación y color del guante. El entrenamiento **genera** el `manifest.json` junto al `.tflite` ([ADR 0006](decisiones/0006-paquetes-de-lengua.md))
 
 #### Etapa 4.3 — Qué guarda cada muestra (antes de grabar a nadie)
 
@@ -201,7 +201,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [ ] **Exportar una sesión** a un archivo (JSON con versión de esquema) y compartirlo con el sistema (`expo-sharing`)
 - [ ] **Importar** archivos de sesión en el teléfono principal (`expo-document-picker`), detectando duplicados
 - [ ] Identificadores que no choquen entre teléfonos: cada sesión con un UUID; el código de persona (`P01`…) puede repetirse en dos teléfonos, así que la importación avisa
-- [ ] Exportar todo a la PC para entrenar (`ml/data/`, fuera de git)
+- [ ] Exportar todo a la PC para entrenar (`ml/languages/aed/data/`, fuera de git)
 - [ ] Borrar sesiones desde la app (si alguien retira su consentimiento)
 - [ ] ADR con el esquema y el formato de intercambio
 
@@ -221,7 +221,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 #### Etapa 4.7 — Piloto y grabación
 
 - [ ] Piloto con vos en el **teléfono** (no el emulador): ajustar tiempos y textos
-- [ ] Grabar a 3–5 personas, cada una con su consentimiento; exportar a `ml/data/` (fuera de git si tiene datos de personas: se decide en la etapa 4.4)
+- [ ] Grabar a 3–5 personas, cada una con su consentimiento; exportar a `ml/languages/aed/data/` (fuera de git)
 
 #### Etapa 4.8 — Entrenamiento (nivel 1)
 
