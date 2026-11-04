@@ -32,6 +32,23 @@ export interface SessionExport {
   }[];
 }
 
+function exportsDirectory(): Directory {
+  return new Directory(Paths.cache, 'exports');
+}
+
+/** Removes the exported files of a session (their names end with its id prefix). */
+export function deleteSessionExports(sessionId: string): void {
+  const directory = exportsDirectory();
+  if (!directory.exists) {
+    return;
+  }
+  for (const item of directory.list()) {
+    if (item instanceof File && item.name.endsWith(`-${sessionId.slice(0, 8)}.json`)) {
+      item.delete();
+    }
+  }
+}
+
 /** Writes the session (without discarded takes) to a JSON file in the cache. */
 export async function exportSession(sessionId: string): Promise<File> {
   const session = await getSession(sessionId);
@@ -64,7 +81,7 @@ export async function exportSession(sessionId: string): Promise<File> {
     })),
   };
 
-  const directory = new Directory(Paths.cache, 'exports');
+  const directory = exportsDirectory();
   directory.create({ intermediates: true, idempotent: true });
   const date = new Date(session.created_at).toISOString().slice(0, 10);
   const file = new File(

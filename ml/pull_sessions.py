@@ -49,6 +49,9 @@ def main() -> None:
 
     data_dir = LANGUAGES_DIR / args.language / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
+    # Sessions moved to data/excluded/ (e.g. while learning the letters) are kept
+    # out of training: don't bring them back.
+    excluded = {path.name for path in (data_dir / "excluded").glob("*.json")}
     for serial in serials:
         try:
             listing = adb(adb_path, serial, "exec-out", "run-as", PACKAGE, "ls", EXPORTS_DIR).decode()
@@ -57,6 +60,9 @@ def main() -> None:
             continue
         names = [name for name in listing.split() if name.startswith(f"{args.language}-") and name.endswith(".json")]
         for name in names:
+            if name in excluded:
+                print(f"{serial}: {name} (excluded, skipped)")
+                continue
             target = data_dir / name
             content = adb(adb_path, serial, "exec-out", "run-as", PACKAGE, "cat", f"{EXPORTS_DIR}/{name}")
             status = "updated" if target.exists() else "new"
