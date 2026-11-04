@@ -24,17 +24,17 @@ from ai_edge_litert.interpreter import Interpreter
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, classification_report, confusion_matrix
 
 from signs.catalog import LANGUAGES_DIR, load_catalog
-from signs.features import FEATURES, NORMALIZATION_VERSION
+from signs.features import LOCATION_VERSION, NORMALIZATION_VERSION
 from signs.sessions import load_sessions, samples_from_sessions
 
 ML_DIR = Path(__file__).resolve().parent
 
 
-def build_model(classes: int) -> tf.keras.Model:
-    """A small dense network: 63 numbers in, one probability per class out."""
+def build_model(features: int, classes: int) -> tf.keras.Model:
+    """A small dense network: the hand's numbers in, one probability per class out."""
     model = tf.keras.Sequential(
         [
-            tf.keras.Input(shape=(FEATURES,)),
+            tf.keras.Input(shape=(features,)),
             tf.keras.layers.Dense(128, activation="relu"),
             tf.keras.layers.Dropout(0.3),
             tf.keras.layers.Dense(64, activation="relu"),
@@ -50,7 +50,7 @@ def fit(x: np.ndarray, y: np.ndarray, classes: int, epochs: int, seed: int) -> t
     tf.keras.utils.set_random_seed(seed)
     # Keras takes the validation split from the end of the arrays: shuffle first.
     order = np.random.default_rng(seed).permutation(len(x))
-    model = build_model(classes)
+    model = build_model(x.shape[1], classes)
     model.fit(
         x[order],
         y[order],
@@ -83,6 +83,7 @@ def main() -> None:
         metavar="THRESHOLD",
         help="only frames where the hand is still (change per frame below THRESHOLD, e.g. 0.15)",
     )
+    parser.add_argument("--no-location", action="store_true", help="hand shape only, even on face letters")
     parser.add_argument("--data-dir", type=Path, help="default: languages/<language>/data")
     parser.add_argument("--out-dir", type=Path, help="default: languages/<language>/models/level-<n>")
     args = parser.parse_args()
@@ -92,14 +93,16 @@ def main() -> None:
     labels = [entry.id for entry in entries]
     data_dir = args.data_dir or LANGUAGES_DIR / args.language / "data"
     sessions = load_sessions(data_dir)
-    samples = samples_from_sessions(sessions, entries, args.still)
+    # Letters signed on the face or body also need where the hand is (ADR 0009).
+    with_location = not args.no_location and any(entry.location != "neutral" for entry in entries)
+    samples = samples_from_sessions(sessions, entries, args.still, with_location)
     if not samples:
         raise SystemExit(f"No samples for level {args.level} in {data_dir}")
 
     x = np.stack([sample.features for sample in samples])
     y = np.array([labels.index(sample.entry_id) for sample in samples])
     participants = sorted({sample.participant for sample in samples})
-    print(f"{len(sessions)} sessions, {len(participants)} people, {len(samples)} frames")
+    print(f"{len(sessions)} sessions, {len(participants)} people, {len(samples)} frames, {x.shape[1]} numbers per frame{' (with location)' if with_location else ''}")
     counts = Counter(sample.entry_id for sample in samples)
     print("Frames per class:", ", ".join(f"{label}={counts.get(label, 0)}" for label in labels))
     missing = [label for label in labels if counts.get(label, 0) == 0]
@@ -175,7 +178,12 @@ def main() -> None:
         "catalogSchema": catalog.schema_version,
         "labels": labels,
         "letters": [entry.letter for entry in entries],
-        "normalization": {"version": NORMALIZATION_VERSION, "input": "worldLandmarks", "features": FEATURES},
+        "normalization": {
+            "version": NORMALIZATION_VERSION,
+            "input": "worldLandmarks + palmNormal",
+            "location": {"version": LOCATION_VERSION, "relativeTo": "eyes"} if with_location else None,
+            "features": int(x.shape[1]),
+        },
         "model": {"file": "model.tflite", "sha256": hashlib.sha256(tflite).hexdigest(), "bytes": len(tflite)},
         "evaluation": {"strategy": strategy, "accuracy": accuracy, "folds": fold_scores, "recall": recall},
         "data": {

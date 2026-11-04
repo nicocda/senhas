@@ -19,6 +19,42 @@ POINT_FEATURES = POINTS * 3  # the 21 points; the palm normal comes after them
 FEATURES = POINT_FEATURES + 3
 
 
+# Hand location relative to the face (levels whose letters are signed on the face or
+# body). Bump on any change below.
+LOCATION_VERSION = 1
+LOCATION_FEATURES = 4
+INDEX_TIP = 8
+# Face Detector keypoints (ADR 0009): 0 left eye, 1 right eye, 2 nose, 3 mouth, ...
+FACE_KEYPOINTS = 6
+
+
+def hand_location(
+    landmarks: list[float], body: list[float], width: float, height: float, dominant_hand: str
+) -> np.ndarray | None:
+    """Wrist and index fingertip relative to the eyes -> 4 numbers.
+
+    - Normalized coordinates times the image size, so x and y are both in pixels
+      (the image is 720x1280: one unit of x is not one unit of y).
+    - Origin: the midpoint between the eyes. Unit: the distance between the eyes,
+      so being closer to the camera doesn't change the numbers.
+    - Left-handed people: mirrored on x, like the hand.
+    Null without a face (or a degenerate one).
+    """
+    if len(body) < FACE_KEYPOINTS * 3 or not width or not height:
+        return None
+    size = np.array([width, height], dtype=np.float32)
+    face = np.asarray(body, dtype=np.float32).reshape(-1, 3)[:, :2] * size
+    hand = np.asarray(landmarks, dtype=np.float32).reshape(POINTS, 3)[:, :2] * size
+    eyes = (face[0] + face[1]) / 2
+    unit = float(np.linalg.norm(face[0] - face[1]))
+    if unit < 1:
+        return None
+    points = (hand[[WRIST, INDEX_TIP]] - eyes) / unit
+    if dominant_hand == "left":
+        points[:, 0] *= -1
+    return points.reshape(LOCATION_FEATURES)
+
+
 def normalize_hand(world: list[float], dominant_hand: str) -> np.ndarray | None:
     """World landmarks (flat x, y, z in meters) -> 63 numbers.
 

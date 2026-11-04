@@ -241,7 +241,8 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] **Segunda sesión** (P-B2D5, Nico, mismo día): 91% de tomas firmes (antes 72%); K y R aprendidas. Dentro de la sesión, **92,5%** (K 100%, R 94%); entre sesiones, 68%, porque en la primera la R y una V se hicieron distinto. La sesión 1 queda fuera del entrenamiento (`data/excluded/`, `pull_sessions.py` no la vuelve a traer). Lo que queda difícil es O→D
 - [x] Descartar una sesión al terminarla (se borra del teléfono con sus tomas); si no se descarta, queda guardada
 - [ ] Al evaluar con varias personas: saber qué sesiones son de la misma persona (hoy cada sesión tiene su código), para no medir "persona nueva" con alguien que el modelo ya vio
-- [ ] Entrenar el nivel 1 con datos de varias personas. Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación
+- [ ] Entrenar el nivel 1 con datos de varias personas.
+- [x] **Primera sesión del nivel 2** (P-4C9D): la cara se vio en el 100% de los cuadros y cada letra cae en su zona respecto de los ojos (la F en el pecho: el Face Detector alcanza). Solo forma de la mano: 91,5%; con ubicación: 91,7%. La T de la ronda 3 tuvo forma de I y el modelo, entrenado con pocas rondas, no aprendió a usar la ubicación (aprende el atajo más fácil). Hacen falta más sesiones; si sigue, aumentar los datos "ensuciando" la forma para forzar la ubicación Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación
 - [ ] Analizar las clases marcadas con `confusableWith` (D y O): qué puntos las separan en los datos reales y cuánto se confunden
 
 **Hecho cuando:** hay un dataset de 3–5 personas con las 28 letras, y el modelo del nivel 1 supera una exactitud acordada con personas que nunca vio, y se entiende por qué falla donde falla.

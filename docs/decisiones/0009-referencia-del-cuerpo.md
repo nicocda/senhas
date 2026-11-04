@@ -1,6 +1,6 @@
 # ADR 0009 — Referencia del cuerpo: Face Detector, activable
 
-- **Estado:** aceptada (provisional: se confirma con los datos del nivel 2)
+- **Estado:** aceptada (confirmada con la primera sesión del nivel 2, ver "Resultado")
 - **Fecha:** 2026-11-04
 
 ## Contexto
@@ -40,6 +40,17 @@ tarda unas diez veces más.
 - **Provisional:** si la estimación del pecho no alcanza para separar la F, se cambia a la pose solo
   para esa letra.
 - Los tres modelos se descargan al compilar, fijados a la versión 1 y verificados con SHA-256.
+
+## Resultado (sesión P-4C9D, nivel 2)
+
+- La cara se detectó en el **100% de los cuadros**, incluso en la E y la Y, con la mano junto al ojo.
+- La punta del índice respecto de los ojos, en distancias entre ojos, cae en una zona propia por
+  letra: E (−0,8; −0,3), I (−0,6; +0,7), Y (−1,4; +0,7), G (−1,2; +1,1), T (0; +1,6),
+  S (+0,2; +1,6), V2 (+0,5; +2,2) y **F (+2,6; +4,0), en el pecho**. No hace falta la pose para la F.
+- Al clasificador se le agregan 4 números de ubicación (muñeca e índice respecto de los ojos;
+  `hand_location`, versión 1). Con una sola sesión casi no cambia la exactitud (91,5% → 91,7%): en
+  las rondas de entrenamiento la forma de la mano ya alcanzaba, y la red no aprendió a mirar la
+  ubicación. Hace falta más variedad de datos.
 
 ## Fuentes
 
