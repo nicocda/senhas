@@ -22,6 +22,13 @@
         "accuracy": 0.917,
         "trainedAt": "2026-11-04T15:49:14-0300"
       }
+    },
+    "4": {
+      "extraRounds": {},
+      "basedOn": {
+        "accuracy": 1.0,
+        "trainedAt": "2026-11-04T16:30:36-0300"
+      }
     }
   }
 }

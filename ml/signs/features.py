@@ -55,6 +55,55 @@ def hand_location(
     return points.reshape(LOCATION_FEATURES)
 
 
+# Two-handed letters: where the other hand is relative to the dominant one.
+# Bump on any change below.
+TWO_HANDS_VERSION = 1
+RELATIVE_FEATURES = 4
+
+
+def other_hand_position(
+    dominant: list[float], other: list[float], width: float, height: float, dominant_hand: str
+) -> np.ndarray | None:
+    """Wrist and index fingertip of the other hand relative to the dominant wrist,
+    in units of the dominant hand's size (wrist -> middle knuckle) -> 4 numbers.
+
+    Normalized coordinates times the image size, so x and y are both pixels. No
+    face needed: the hands are their own reference. Mirrored on x for left-handed
+    people.
+    """
+    if not width or not height:
+        return None
+    size = np.array([width, height], dtype=np.float32)
+    a = np.asarray(dominant, dtype=np.float32).reshape(POINTS, 3)[:, :2] * size
+    b = np.asarray(other, dtype=np.float32).reshape(POINTS, 3)[:, :2] * size
+    unit = float(np.linalg.norm(a[MIDDLE_MCP] - a[WRIST]))
+    if unit < 1:
+        return None
+    points = (b[[WRIST, INDEX_TIP]] - a[WRIST]) / unit
+    if dominant_hand == "left":
+        points[:, 0] *= -1
+    return points.reshape(RELATIVE_FEATURES)
+
+
+def two_hands(hands: list[dict], width: float, height: float, dominant_hand: str) -> np.ndarray | None:
+    """Both hands -> dominant hand shape (66) + other hand shape (66) + other hand
+    position (4). Which is which comes from MediaPipe's handedness; the other hand
+    is normalized as the opposite hand, so it also looks like a right hand."""
+    if len(hands) != 2:
+        return None
+    other_side = "left" if dominant_hand == "right" else "right"
+    dominant = next((h for h in hands if h["handedness"] == dominant_hand), None)
+    other = next((h for h in hands if h["handedness"] == other_side), None)
+    if dominant is None or other is None:
+        return None
+    shape_a = normalize_hand(dominant["world"], dominant_hand)
+    shape_b = normalize_hand(other["world"], other_side)
+    position = other_hand_position(dominant["landmarks"], other["landmarks"], width, height, dominant_hand)
+    if shape_a is None or shape_b is None or position is None:
+        return None
+    return np.concatenate([shape_a, shape_b, position])
+
+
 def normalize_hand(world: list[float], dominant_hand: str) -> np.ndarray | None:
     """World landmarks (flat x, y, z in meters) -> 63 numbers.
 

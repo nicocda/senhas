@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from .catalog import Entry
-from .features import POINT_FEATURES, hand_location, normalize_hand
+from .features import POINT_FEATURES, hand_location, normalize_hand, two_hands
 
 FORMAT = "senhas-session"
 SUPPORTED_FORMAT_VERSIONS = {1, 2}
@@ -99,8 +99,13 @@ def samples_from_sessions(
             features = []
             for frame in take["frames"]:
                 hands = frame["hands"]
-                if len(hands) != entry.hands or entry.hands != 1:
-                    continue  # one-handed letters only for now
+                if len(hands) != entry.hands:
+                    continue
+                if entry.hands == 2:
+                    vector = two_hands(hands, take.get("imageWidth"), take.get("imageHeight"), dominant)
+                    if vector is not None:
+                        features.append(vector)
+                    continue
                 vector = normalize_hand(hands[0]["world"], dominant)
                 if vector is None:
                     continue

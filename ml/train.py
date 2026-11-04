@@ -24,7 +24,7 @@ from ai_edge_litert.interpreter import Interpreter
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, classification_report, confusion_matrix
 
 from signs.catalog import LANGUAGES_DIR, load_catalog
-from signs.features import LOCATION_VERSION, NORMALIZATION_VERSION
+from signs.features import LOCATION_VERSION, NORMALIZATION_VERSION, TWO_HANDS_VERSION
 from signs.sessions import load_sessions, samples_from_sessions, share_of_takes_with_face
 
 ML_DIR = Path(__file__).resolve().parent
@@ -110,6 +110,9 @@ def main() -> None:
             # This script classifies single frames: a movement letter is a sequence.
             raise SystemExit(f"Level {args.level} has movement letters: they need a sequence model.")
     labels = [entry.id for entry in entries]
+    two_handed = all(entry.hands == 2 for entry in entries)
+    if any(entry.hands == 2 for entry in entries) and not two_handed:
+        raise SystemExit("One- and two-handed letters can't share a model (different inputs).")
     data_dir = args.data_dir or LANGUAGES_DIR / args.language / "data"
     sessions = load_sessions(data_dir)
     # Letters signed on the face or body also need where the hand is (ADR 0009). Only
@@ -212,6 +215,7 @@ def main() -> None:
         "normalization": {
             "version": NORMALIZATION_VERSION,
             "input": "worldLandmarks + palmNormal",
+            "twoHands": {"version": TWO_HANDS_VERSION} if two_handed else None,
             "location": {"version": LOCATION_VERSION, "relativeTo": "eyes"} if with_location else None,
             "features": int(x.shape[1]),
         },
