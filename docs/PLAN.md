@@ -242,6 +242,8 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] Descartar una sesión al terminarla (se borra del teléfono con sus tomas); si no se descarta, queda guardada
 - [ ] Al evaluar con varias personas: saber qué sesiones son de la misma persona (hoy cada sesión tiene su código), para no medir "persona nueva" con alguien que el modelo ya vio
 - [ ] Entrenar el nivel 1 con datos de varias personas.
+- [ ] *(Anotado por Nico)* Grabar ejemplos con la **mano izquierda**, para probar el espejado con datos reales
+- [ ] *(Anotado por Nico)* **Partir el nivel 1 en dos pruebas**: con ~40 tomas, a partir de la 30 cansa y se mira cuánto falta (en el nivel 2, con menos tomas, no pasó)
 - [x] **Primera sesión del nivel 2** (P-4C9D): la cara se vio en el 100% de los cuadros y cada letra cae en su zona respecto de los ojos (la F en el pecho: el Face Detector alcanza). Solo forma de la mano: 91,5%; con ubicación: 91,7%. La T de la ronda 3 tuvo forma de I y el modelo, entrenado con pocas rondas, no aprendió a usar la ubicación (aprende el atajo más fácil). Hacen falta más sesiones; si sigue, aumentar los datos "ensuciando" la forma para forzar la ubicación Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación
 - [ ] Analizar las clases marcadas con `confusableWith` (D y O): qué puntos las separan en los datos reales y cuánto se confunden
 
@@ -252,9 +254,11 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 ### Hito 5 — Reconocimiento en la app
 
-- [ ] **Decisión abierta:** dónde corre el clasificador. Las opciones son `react-native-fast-tflite` (trae LiteRT 1.4.0, posible choque con las librerías nativas de MediaPipe) o hacerlo en el mismo plugin Kotlin. Se decide con una prueba y queda en un ADR
-- [ ] Integrar el modelo y mostrar la letra reconocida con su confianza
-- [ ] Suavizado temporal (votación sobre los últimos N cuadros) para que no "parpadee"
+- [x] Dónde corre el clasificador: **en TypeScript**, con los pesos exportados a JSON. Es una red de ~17k multiplicaciones y no justifica un runtime nativo ([ADR 0010](decisiones/0010-clasificador-en-typescript.md)). Verificado igual al `.tflite` en todos los cuadros reales
+- [x] "Detectar" muestra la letra reconocida con su color y su confianza; se elige reconocer las letras del nivel 1 o del nivel 2 (este último enciende la cara)
+- [ ] Probarlo en vivo con las letras de los niveles 1 y 2
+- [x] Suavizado: votación sobre los últimos 10 cuadros (gana con 6 votos y 60% de confianza media; si no, "¿…?")
+- [ ] Reconocer niveles 1 y 2 a la vez (hoy se elige uno): hacen falta datos del nivel 1 con la cara, para separar la C de la E
 
 **Hecho cuando:** deletreas palabras simples y la app las reconoce en vivo.
 **Aprendes:** inferencia en el dispositivo, rendimiento, UX de resultados con incertidumbre.
@@ -272,7 +276,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 | # | Decisión | Cuándo |
 |---|---|---|
-| 1 | Runtime del clasificador en la app | Hito 5 |
+| ~~1~~ | ~~Runtime del clasificador en la app~~ → TypeScript ([ADR 0010](decisiones/0010-clasificador-en-typescript.md)) | ✅ Hito 4 |
 | ~~2~~ | ~~Librería para dibujar el esqueleto sobre la cámara~~ → Skia ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md)) | ✅ Hito 3 |
 | ~~3~~ | ~~Gestor de entorno Python~~ → `venv` + `pip` con dependencias fijadas | ✅ Hito 4 |
 | ~~4~~ | ~~Fuente de datos del alfabeto LSA (propia vs pública)~~ → propia, captura tipo juego ([ADR 0005](decisiones/0005-datos-propios-captura-tipo-juego.md)) | ✅ Hito 4 |
