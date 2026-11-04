@@ -48,6 +48,10 @@ ml/languages/aed/            ← código ISO 639-3 de la LSA
   la entrada representa la letra de su `id`. El modelo aprende cada forma por separado, y al
   reconocer se muestra la letra. Así una forma no "contamina" a la otra, y se ve cuál de las dos
   se confunde.
+- **Pares mínimos:** `sameHandshapeAs` marca una entrada con la misma configuración que otra, que
+  se distingue por otro parámetro. Por ejemplo, la E tiene la forma de la C pero se hace en el ojo.
+  El entrenamiento lo usa para saber qué clases necesitan la referencia de la cara, y la
+  evaluación, para saber qué confusiones esperar.
 - **`verified: false`** hasta que una persona lo confirme contra la referencia de la CAS. La
   clasificación inicial se sacó de la ilustración.
 - **El `manifest.json` lo genera el entrenamiento**, nunca se escribe a mano. La app lo lee para

@@ -20,8 +20,13 @@ orientación, la ubicación, la dirección del movimiento y los rasgos no manual
 profesorados argentinos de LSA usan esa misma lista.
 
 **Par mínimo:** dos señas que difieren en un solo parámetro. Es la prueba de que ese parámetro
-importa. En el alfabeto pasa con la orientación: si dos letras tienen la misma forma de mano y solo
-cambia hacia dónde apuntan, el modelo tiene que poder ver la orientación.
+importa. En el alfabeto de la LSA hay un ejemplo clarísimo: **la C y la E tienen la misma
+configuración**, pero la E se hace en el ojo y la C frente al cuerpo. Solo cambia la **ubicación**.
+Un modelo que mira solo la mano no puede separarlas: hace falta saber dónde está la cara. Pasa lo
+mismo con la orientación: si dos letras tienen la misma forma de mano y solo cambia hacia dónde
+apuntan, el modelo tiene que poder ver la orientación.
+
+En el catálogo, estos pares se marcan con `sameHandshapeAs` (la E tiene `"sameHandshapeAs": "C"`).
 
 ## Qué ve nuestro sistema de cada parámetro
 
@@ -40,10 +45,11 @@ guarda justamente los parámetros que no salen de la forma de la mano: `hands`, 
 
 ## Para confirmar con el video de la CAS
 
-La clasificación de [`letters.json`](../../ml/languages/aed/letters.json) es **provisional**. Sale de
-mirar la lámina de la CAS, que no lo dice en texto. Con el
-[video de la CAS](https://cas.org.ar/alfabeto-manual-argentino/), revisá cada letra y, si coincide,
-pasá su `verified` a `true`:
+✅ **Confirmada por Nico con el video de la CAS (2026-11-04)**: todo coincide. Además aportó el par
+mínimo C/E. Si aparecen más pares, se marcan con `sameHandshapeAs`.
+
+La clasificación salió de mirar la lámina de la CAS, que no lo dice en texto. Lo que se revisó con el
+[video de la CAS](https://cas.org.ar/alfabeto-manual-argentino/):
 
 - **Movimiento** (nivel 3): CH, H, J, Z. ¿Hay otras que se muevan?
 - **Dos manos** (nivel 4): Ñ, Q, W, X. Ojo con la **Q** y la **J**: ProyectoTDLSV las clasifica distinto.
