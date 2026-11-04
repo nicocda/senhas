@@ -22,6 +22,11 @@
 - `npm run check`: typecheck + lint + format:check. Tiene que pasar antes de cada commit.
 - `npm run android`: compila e instala en el emulador o dispositivo.
 
+## Comandos (desde `ml/`, con `.venv\Scripts\python`)
+- `pull_sessions.py`: copia por USB las sesiones exportadas de los teléfonos a `languages/aed/data/`.
+- `train.py --level 1`: entrena, evalúa (una persona o ronda afuera), exporta `.tflite` + `manifest.json`.
+- Datos de personas, modelos y corridas están fuera de git (`ml/.gitignore`).
+
 ## Reglas
 - `docs/PLAN.md` es la fuente de verdad del progreso: actualizalo al completar ítems.
 - Las decisiones técnicas relevantes van como ADR en `docs/decisiones/NNNN-titulo.md`.

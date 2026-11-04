@@ -1,8 +1,10 @@
-import { createHandLandmarker } from 'hand-landmarker';
-import { useEffect, useMemo, useState } from 'react';
+import { createHandLandmarker, type DetectedHand } from 'hand-landmarker';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 import { useFrameOutput } from 'react-native-vision-camera';
 import { createSynchronizable, scheduleOnRN } from 'react-native-worklets';
+
+import type { RecordedFrame, RecordedHand, RecordedTake } from '@/dataset/types';
 
 const STATS_WINDOW_MS = 1000;
 
@@ -42,6 +44,38 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
     [],
   );
 
+  // Recording: the worklet checks `recording` on the camera thread, and the frames
+  // are collected on the JS thread. Frames already in flight when recording stops
+  // are dropped by the JS-side check.
+  const recording = useSharedValue(false);
+  const take = useRef<{ startedAt: number; frames: RecordedFrame[] } | null>(null);
+
+  const appendFrame = useCallback((timestamp: number, hands: RecordedHand[]) => {
+    const current = take.current;
+    if (current != null) {
+      current.frames.push({ t: timestamp - current.startedAt, hands });
+    }
+  }, []);
+
+  // Stable identities: screens use these in effect dependencies (timers).
+  const startRecording = useCallback(() => {
+    take.current = { startedAt: Date.now(), frames: [] };
+    // set() instead of `.value =`: the React Compiler can't tell a shared value is mutable.
+    recording.set(true);
+  }, [recording]);
+
+  /**
+   * Stops recording and returns the take: its frames, and the size of the upright
+   * image the normalized landmarks refer to (needed to undo the aspect ratio).
+   */
+  const stopRecording = useCallback((): RecordedTake => {
+    recording.set(false);
+    const frames = take.current?.frames ?? [];
+    take.current = null;
+    const { width, height } = imageSize.get();
+    return { frames, imageWidth: width, imageHeight: height };
+  }, [recording, imageSize]);
+
   const frameOutput = useFrameOutput({
     // MediaPipe only accepts RGBA, so the camera pipeline converts YUV for us.
     pixelFormat: 'rgb',
@@ -60,6 +94,10 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
         }
 
         const now = Date.now();
+        if (recording.value) {
+          scheduleOnRN(appendFrame, now, detection.hands.map(toRecordedHand));
+        }
+
         const current = window.getDirty();
         const frames = current.frames + 1;
         const conversionMs = current.conversionMs + detection.conversionMs;
@@ -87,5 +125,21 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
     },
   });
 
-  return { frameOutput, landmarks, imageSize, stats };
+  return { frameOutput, landmarks, imageSize, stats, startRecording, stopRecording };
+}
+
+/** 5 decimals: well below a pixel in normalized coordinates, and 0.01 mm in world ones. */
+function round(value: number): number {
+  'worklet';
+  return Math.round(value * 1e5) / 1e5;
+}
+
+function toRecordedHand(hand: DetectedHand): RecordedHand {
+  'worklet';
+  return {
+    handedness: hand.handedness,
+    score: round(hand.score),
+    landmarks: hand.landmarks.flatMap((point) => [round(point.x), round(point.y), round(point.z)]),
+    world: hand.worldLandmarks.flatMap((point) => [round(point.x), round(point.y), round(point.z)]),
+  };
 }

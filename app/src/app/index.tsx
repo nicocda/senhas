@@ -2,8 +2,11 @@ import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { toggleDebugMode } from '@/debug/debug-log';
 
 const LEVELS = [1, 2, 3, 4] as const;
+/** Levels 2-4 need the face reference and the glove first (etapas 4.3 y 4.5). */
+const ENABLED_LEVELS = new Set<number>([1]);
 
 /**
  * Home menu. The camera only starts inside the screens that need it, so the
@@ -14,7 +17,10 @@ export default function MenuScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Señas</Text>
+      {/* Hidden switch: a long press on the title toggles the debug log. */}
+      <Text style={styles.title} onLongPress={toggleDebugMode}>
+        Señas
+      </Text>
 
       <View style={styles.section}>
         <Button label="Detectar" onPress={() => router.push('/detect')} />
@@ -22,11 +28,17 @@ export default function MenuScreen() {
 
       <View style={styles.section}>
         <Text style={styles.heading}>Grabar datos</Text>
-        <Text style={styles.hint}>Próximamente</Text>
+        <Text style={styles.hint}>Por ahora, solo el nivel 1</Text>
         <View style={styles.levels}>
           {LEVELS.map((level) => (
             <View key={level} style={styles.level}>
-              <Button label={`Nivel ${level}`} disabled />
+              <Button
+                label={`Nivel ${level}`}
+                disabled={!ENABLED_LEVELS.has(level)}
+                onPress={() =>
+                  router.push({ pathname: '/capture', params: { level: String(level) } })
+                }
+              />
             </View>
           ))}
         </View>

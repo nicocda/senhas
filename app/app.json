@@ -31,7 +31,9 @@
           "imageWidth": 76
         }
       ],
-      "./plugins/with-windows-cmake"
+      "./plugins/with-windows-cmake",
+      "expo-sqlite",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

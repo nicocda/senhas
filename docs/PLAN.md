@@ -197,13 +197,13 @@ se confirma en la etapa 4.2):
 
 Escenario: varios teléfonos graban en paralelo y después todo se junta en uno principal.
 
-- [ ] **SQLite** (`expo-sqlite`) como almacén en cada teléfono: sesiones, letras, rondas y cuadros; permite contar muestras, filtrar y borrar
-- [ ] **Exportar una sesión** a un archivo (JSON con versión de esquema) y compartirlo con el sistema (`expo-sharing`)
+- [x] **SQLite** (`expo-sqlite`) como almacén en cada teléfono: sesiones y tomas (cuadros en JSON, tamaño de imagen). Migraciones con `PRAGMA user_version` (v2: tamaño de imagen, probada en el teléfono). Las tomas repetidas se marcan como descartadas
+- [x] **Exportar una sesión** a un JSON versionado (`formatVersion` 2) y compartirlo con el sistema (`expo-sharing`)
 - [ ] **Importar** archivos de sesión en el teléfono principal (`expo-document-picker`), detectando duplicados
-- [ ] Identificadores que no choquen entre teléfonos: cada sesión con un UUID; el código de persona (`P01`…) puede repetirse en dos teléfonos, así que la importación avisa
-- [ ] Exportar todo a la PC para entrenar (`ml/languages/aed/data/`, fuera de git)
-- [ ] Borrar sesiones desde la app (si alguien retira su consentimiento)
-- [ ] ADR con el esquema y el formato de intercambio
+- [x] Identificadores que no choquen entre teléfonos: cada sesión y cada toma con un UUID (`expo-crypto`). Pendiente con la importación: avisar si un código de persona (`P01`…) se repite
+- [x] Pasar las sesiones a la PC por USB, sin la nube: `ml/pull_sessions.py` (`adb run-as`) → `ml/languages/aed/data/` (fuera de git)
+- [ ] Pantalla de sesiones: listar, exportar y **borrar** (si alguien retira su consentimiento). Mientras tanto, se borra con `adb run-as`
+- [x] [ADR 0007](decisiones/0007-almacenamiento-y-exportacion.md): esquema y formato de intercambio
 
 #### Etapa 4.5 — El guante
 
@@ -213,11 +213,14 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 #### Etapa 4.6 — Pantalla de captura tipo juego
 
 - [x] **Menú inicial** con la cámara apagada: *Detectar* (la vista en vivo), *Grabar datos* (4 niveles, desactivados hasta esta etapa) y *Ejercicios* (por definir). Al volver al menú, la cámara se cierra y el landmarker se libera
-- [ ] Inicio: consentimiento, identificador sin nombre (`P01`…), mano dominante, elegir niveles (por defecto, todos)
-- [ ] Ciclo por letra: **preparate** (≈1,5 s, letra grande + guante de ejemplo; no se guarda) → **grabando** (≈2 s; ≈3 s para el nivel 3, con cuenta regresiva) → siguiente
-- [ ] **3 rondas** con las letras en orden aleatorio; botón **repetir** si salió mal
-- [ ] Modo de dos manos automático en el nivel 4 (`numHands` según la letra)
-- [ ] Resumen final: muestras por letra
+- [x] **Versión mínima del nivel 1**, para el piloto (sin guante ni cara): el catálogo se lee de `ml/` (Metro con `watchFolders`), el hook graba los cuadros entre `startRecording` y `stopRecording`
+- [x] Inicio: consentimiento, identificador sin nombre (`P01`…), mano dominante. *Pendiente:* elegir varios niveles en una sesión
+- [x] Ciclo por letra: **preparate** (1,5 s, letra grande con su color; no se guarda) → **grabando** (2 s; 3 s con movimiento) → siguiente. *Pendiente:* guante de ejemplo y cuenta regresiva
+- [x] **3 rondas** con las letras en orden aleatorio; botón **repetir** la última toma
+- [x] Modo de dos manos automático según la letra (`numHands` = `hands` del catálogo)
+- [x] Resumen final: cuadros con mano por letra (avisa si hay pocos) y exportar
+- [x] **Log de depuración** oculto (pulsación larga sobre el título del menú): sesiones, tomas con cuadros y cuadros con mano, exportaciones y errores
+- [ ] Habilitar los niveles 2–4 (necesitan la cara y el guante)
 
 #### Etapa 4.7 — Piloto y grabación
 
@@ -226,11 +229,11 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 #### Etapa 4.8 — Entrenamiento (nivel 1)
 
-- [ ] Entorno Python aislado (`venv`) con dependencias fijadas
-- [ ] Preprocesado: normalizar posición, escala y mano izquierda o derecha. **Conservar la orientación** respecto de la pantalla: M, N y P se distinguen porque apuntan hacia abajo
-- [ ] Entrenar el clasificador del nivel 1 (Keras). Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación
-- [ ] Analizar las clases marcadas con `confusableWith` (D y O): qué puntos las separan en los datos reales y cuánto se confunden, evaluarlo **dejando afuera a una persona por vez** (exactitud, matriz de confusión) y exportarlo a `.tflite`
-- [ ] Probar el `.tflite` en la PC con `ai-edge-litert`
+- [x] Entorno Python aislado: `venv` + `pip` (Python 3.12), dependencias directas fijas en `ml/requirements.txt` y todas en `requirements.lock.txt`. TensorFlow 2.21, LiteRT 2.3.0, scikit-learn 1.9.1 y matplotlib 3.11.2, con wheels para Windows verificadas en PyPI
+- [x] Preprocesado ([ADR 0008](decisiones/0008-entrada-del-clasificador.md)): world landmarks; posición (muñeca al origen), escala (muñeca → nudillo medio) y lateralidad (zurdos espejados). **Se conserva la orientación**: M, N y P se distinguen porque apuntan hacia abajo
+- [x] `ml/train.py`: red densa (Keras), evaluación dejando afuera **una persona por vez** (o una ronda, si hay una sola persona), matriz de confusión, export a `.tflite` + `manifest.json`, y verificación de que el `.tflite` responde igual que Keras con `ai-edge-litert`. Probado de punta a punta con datos sintéticos
+- [ ] Entrenar el nivel 1 con datos reales. Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación
+- [ ] Analizar las clases marcadas con `confusableWith` (D y O): qué puntos las separan en los datos reales y cuánto se confunden
 
 **Hecho cuando:** hay un dataset de 3–5 personas con las 28 letras, y el modelo del nivel 1 supera una exactitud acordada con personas que nunca vio, y se entiende por qué falla donde falla.
 **Aprendes:** protocolos de captura, consentimiento, formatos de datos versionados, normalización, train/val/test, redes densas, sobreajuste, métricas, cuantización.
@@ -261,7 +264,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 |---|---|---|
 | 1 | Runtime del clasificador en la app | Hito 5 |
 | ~~2~~ | ~~Librería para dibujar el esqueleto sobre la cámara~~ → Skia ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md)) | ✅ Hito 3 |
-| 3 | Gestor de entorno Python (`venv` + `pip` o alternativa) | Hito 4 |
+| ~~3~~ | ~~Gestor de entorno Python~~ → `venv` + `pip` con dependencias fijadas | ✅ Hito 4 |
 | ~~4~~ | ~~Fuente de datos del alfabeto LSA (propia vs pública)~~ → propia, captura tipo juego ([ADR 0005](decisiones/0005-datos-propios-captura-tipo-juego.md)) | ✅ Hito 4 |
 | 5 | Referencia del cuerpo, activable: Face Detector (6 puntos) vs Pose Landmarker lite (puntos 0–12). Se mide en el teléfono | Hito 4, etapa 4.3 |
 | ~~6~~ | ~~Almacenamiento en el teléfono~~ → SQLite + exportar/importar sesiones como archivo | ✅ Hito 4, etapa 4.4 |
