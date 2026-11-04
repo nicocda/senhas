@@ -51,6 +51,44 @@ export function normalizeHand(world: number[], dominantHand: 'left' | 'right'): 
 }
 
 /** Distance between the hand points only (the threshold was tuned on them). */
+/** Same as hand_location in ml/signs/features.py. Bump in both on any change. */
+export const LOCATION_VERSION = 1;
+const INDEX_TIP = 8;
+const FACE_KEYPOINTS = 6;
+
+/**
+ * Wrist and index fingertip relative to the midpoint between the eyes, in eye
+ * distances (normalized coordinates times the image size, so x and y are both
+ * pixels). Mirrored on x for left-handed people. Null without a face.
+ */
+export function handLocation(
+  landmarks: number[],
+  body: number[],
+  imageWidth: number,
+  imageHeight: number,
+  dominantHand: 'left' | 'right',
+): number[] | null {
+  if (body.length < FACE_KEYPOINTS * 3 || imageWidth <= 0 || imageHeight <= 0) {
+    return null;
+  }
+  const px = (values: number[], i: number) => [
+    values[i * 3] * imageWidth,
+    values[i * 3 + 1] * imageHeight,
+  ];
+  const [lx, ly] = px(body, 0);
+  const [rx, ry] = px(body, 1);
+  const eyes = [(lx + rx) / 2, (ly + ry) / 2];
+  const unit = Math.hypot(lx - rx, ly - ry);
+  if (unit < 1) {
+    return null;
+  }
+  const mirror = dominantHand === 'left' ? -1 : 1;
+  return [0, INDEX_TIP].flatMap((point) => {
+    const [x, y] = px(landmarks, point);
+    return [((x - eyes[0]) / unit) * mirror, (y - eyes[1]) / unit];
+  });
+}
+
 function distance(a: number[], b: number[]): number {
   let sum = 0;
   for (let i = 0; i < POINT_FEATURES; i++) {

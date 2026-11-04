@@ -21,10 +21,20 @@ export interface TrackingStats {
 
 const EMPTY_STATS: TrackingStats = { fps: 0, conversionMs: 0, inferenceMs: 0, bodyMs: 0 };
 
+/** What JS receives for every frame when `onLiveFrame` is set (e.g. to recognize letters). */
+export interface LiveFrame {
+  hands: RecordedHand[];
+  body: number[];
+  imageWidth: number;
+  imageHeight: number;
+}
+
 export interface HandTrackingOptions {
   numHands?: 1 | 2;
   /** Face or upper-body points, to place the hand relative to the body (etapa 4.3). */
   bodyReference?: BodyReferenceKind;
+  /** Called on the JS thread with every processed frame. Keep it stable (useCallback). */
+  onLiveFrame?: (frame: LiveFrame) => void;
 }
 
 /**
@@ -36,6 +46,7 @@ export interface HandTrackingOptions {
 export function useHandTracking({
   numHands = 1,
   bodyReference = 'none',
+  onLiveFrame,
 }: HandTrackingOptions = {}) {
   // MediaPipe can't change its options on a live landmarker, so a new value creates
   // a new one; the effect below disposes the old one.
@@ -116,13 +127,24 @@ export function useHandTracking({
         }
 
         const now = Date.now();
-        if (recording.value) {
-          scheduleOnRN(
-            appendFrame,
-            now,
-            detection.hands.map(toRecordedHand),
-            detection.body.flatMap((point) => [round(point.x), round(point.y), round(point.z)]),
-          );
+        if (recording.value || onLiveFrame != null) {
+          const hands = detection.hands.map(toRecordedHand);
+          const bodyPoints = detection.body.flatMap((point) => [
+            round(point.x),
+            round(point.y),
+            round(point.z),
+          ]);
+          if (recording.value) {
+            scheduleOnRN(appendFrame, now, hands, bodyPoints);
+          }
+          if (onLiveFrame != null) {
+            scheduleOnRN(onLiveFrame, {
+              hands,
+              body: bodyPoints,
+              imageWidth: detection.imageWidth,
+              imageHeight: detection.imageHeight,
+            });
+          }
         }
 
         const current = window.getDirty();
