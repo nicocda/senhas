@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from .catalog import Entry
-from .features import normalize_hand
+from .features import POINT_FEATURES, normalize_hand
 
 FORMAT = "senhas-session"
 SUPPORTED_FORMAT_VERSIONS = {1, 2}
@@ -52,7 +52,9 @@ def still_mask(features: list[np.ndarray], threshold: float) -> list[bool]:
     """
     if len(features) < 2:
         return [False] * len(features)
-    steps = [float(np.linalg.norm(features[i] - features[i - 1])) for i in range(1, len(features))]
+    # Hand points only, not the palm normal: the threshold was tuned on them.
+    points = [vector[:POINT_FEATURES] for vector in features]
+    steps = [float(np.linalg.norm(points[i] - points[i - 1])) for i in range(1, len(points))]
     mask = []
     for i in range(len(features)):
         around = [steps[j] for j in (i - 1, i) if 0 <= j < len(steps)]
