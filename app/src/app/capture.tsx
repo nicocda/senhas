@@ -16,7 +16,7 @@ import { Button } from '@/components/button';
 import { randomUUID } from 'expo-crypto';
 
 import { createSession, deleteSession, discardTake, saveTake } from '@/dataset/db';
-import { normalizeHand, steadyMs } from '@/dataset/features';
+import { handLocation, indexTravel, normalizeHand, steadyMs } from '@/dataset/features';
 import { deleteSessionExports, shareSession } from '@/dataset/export';
 import { debugLog } from '@/debug/debug-log';
 
@@ -313,9 +313,10 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
         return;
       }
 
-      // Did the hand hold the letter? Two-handed letters are measured later (level 4).
+      // Did the hand hold the letter? Not for movement letters (moving *is* the letter),
+      // nor two-handed ones yet (level 4).
       const steady =
-        current.entry.hands === 1
+        current.entry.hands === 1 && !current.entry.movement
           ? steadyMs(
               frames.flatMap((frame) => {
                 const features =
@@ -327,6 +328,25 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
             )
           : Infinity;
       const isSteady = steady >= Math.min(MIN_STEADY_MS, recordMs / 3);
+      // Movement letters: how far the index fingertip traveled, in eye distances. Only
+      // logged for now, to learn what a normal movement looks like (no repeat rule yet).
+      const travel = current.entry.movement
+        ? indexTravel(
+            frames.flatMap((frame) => {
+              const location =
+                frame.hands.length === 1
+                  ? handLocation(
+                      frame.hands[0].landmarks,
+                      frame.body,
+                      take.imageWidth,
+                      take.imageHeight,
+                      dominantHand,
+                    )
+                  : null;
+              return location == null ? [] : [location];
+            }),
+          )
+        : null;
 
       try {
         // Saved even if not steady: it shows how the letter was searched for, and
@@ -339,10 +359,11 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
           startedAt: recordStartedAt.current,
         });
         debugLog(
-          `${current.entry.id} r${current.round} intento ${attempt + 1}: ${valid}/${frames.length} con mano, ${Math.round(steady)} ms firme` +
-            (frames.length > 0
-              ? `, cara en ${frames.filter((frame) => frame.body.length > 0).length}`
-              : ''),
+          `${current.entry.id} r${current.round} intento ${attempt + 1}: ${valid}/${frames.length} con mano` +
+            (current.entry.movement
+              ? `, recorrido ${travel == null ? '?' : travel.toFixed(1)}`
+              : `, ${Math.round(steady)} ms firme`) +
+            `, cara en ${frames.filter((frame) => frame.body.length > 0).length}`,
           isSteady ? 'info' : 'warn',
         );
         if (cancelled) {
@@ -546,7 +567,9 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
               ? 'No vi tu mano: repetimos'
               : retry === 'unsteady'
                 ? `Mantené la letra quieta (intento ${attempt + 1}/${MAX_ATTEMPTS})`
-                : 'Preparate…'}
+                : current.entry.movement
+                  ? 'Preparate: el movimiento va cuando diga Grabando'
+                  : 'Preparate…'}
         </Text>
       </View>
       {lastTake != null && (

@@ -223,7 +223,9 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] Resumen final: cuadros con mano por letra (avisa si hay pocos) y exportar
 - [x] **Log de depuración** oculto (pulsación larga sobre el título del menú): sesiones, tomas con cuadros y cuadros con mano, exportaciones y errores
 - [x] Nivel 2 habilitado (con la referencia de la cara; el guante sigue pendiente)
-- [ ] Habilitar los niveles 3 y 4 (movimiento y dos manos)
+- [x] **Nivel 3 habilitado** (CH, H, J, Z): sin la regla de quietud (moverse es la letra); en su lugar se registra cuánto recorrió la punta del índice, en distancias entre ojos, para aprender qué es un movimiento normal antes de poner una regla
+- [ ] Modelo de secuencias para el nivel 3: con pocas secuencias, comparar **DTW + vecino más cercano** (alinea secuencias de distinta velocidad; anda con pocos ejemplos) contra una red recurrente chica (GRU)
+- [ ] Habilitar el nivel 4 (dos manos)
 
 #### Etapa 4.7 — Piloto y grabación
 

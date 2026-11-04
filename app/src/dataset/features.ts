@@ -89,6 +89,25 @@ export function handLocation(
   });
 }
 
+/**
+ * Path length of the index fingertip over a take, in eye distances, from the
+ * handLocation of each frame (its last two numbers). How much a movement letter
+ * actually moved. Null without at least two frames with the face.
+ */
+export function indexTravel(locations: number[][]): number | null {
+  if (locations.length < 2) {
+    return null;
+  }
+  let total = 0;
+  for (let i = 1; i < locations.length; i++) {
+    total += Math.hypot(
+      locations[i][2] - locations[i - 1][2],
+      locations[i][3] - locations[i - 1][3],
+    );
+  }
+  return total;
+}
+
 function distance(a: number[], b: number[]): number {
   let sum = 0;
   for (let i = 0; i < POINT_FEATURES; i++) {
