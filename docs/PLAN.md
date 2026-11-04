@@ -157,21 +157,72 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 ### Hito 4 — Datos y entrenamiento (Python)
 
 - [x] Detectar y dibujar **las dos manos** (algunas señas LSA son bimanuales): `numHands: 2` y overlay por bloques de 21 puntos. Costo en el emulador: 4–6 FPS y MediaPipe 112–145 ms con dos manos, contra ~12 FPS y ~60 ms con una. En modo VIDEO, MediaPipe solo se saltea la detección de palmas si ya sigue `numHands` manos ([hand_landmarker_graph.cc](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/tasks/cc/vision/hand_landmarker/hand_landmarker_graph.cc)). Por eso es **configurable** (`useHandTracking({ numHands })`, botón "1 mano / 2 manos") con **1 por defecto**; a futuro, una seña podría activar el modo de dos manos. Cambiar el valor recrea el landmarker, y el plugin Kotlin sincroniza `detect`/`dispose` para no liberar MediaPipe en medio de una inferencia. *Pendiente:* medir en el teléfono
-- [ ] Ejercicio práctico JS ↔ nativo: cambiar un spec sin nitrogen ni recompilar, ver el error, y después hacerlo bien
-- [ ] Estructura de **paquetes de lengua** pensada para sumar otras lenguas de señas: `ml/languages/aed/` (ISO 639-3 de la LSA) con el catálogo de señas y los datos; el entrenamiento **genera** el `manifest.json` (labels en orden, hash del modelo, versión de normalización) junto al `.tflite`. Va en un ADR
-- [ ] Investigar si existen datasets públicos del alfabeto LSA (y sus licencias)
-- [ ] Pantalla de captura en la app: eliges una letra y graba N muestras de puntos (**no** imágenes)
-- [ ] Exportar las muestras a la PC (JSON o CSV) y armar el dataset en `ml/data/`
+- [x] Investigar qué existe para LSA: **no hay datasets públicos del alfabeto manual**; grabamos datos propios con un protocolo tipo juego ([ADR 0005](decisiones/0005-datos-propios-captura-tipo-juego.md))
+
+**Idea central:** a cada persona la grabamos **una sola vez**, unos 7–8 minutos, con **las 28 letras**.
+Por eso la captura guarda todo lo que vamos a necesitar después, aunque al principio solo
+entrenemos las letras estáticas. Todo corre en el teléfono: sin servidor ni internet.
+
+Las letras se agrupan en **4 niveles** (clasificación provisional, sacada de la lámina de la CAS;
+se confirma en la etapa 4.2):
+
+| Nivel | Letras | Qué tienen |
+|---|---|---|
+| 1 | A B C D K L M N O P R U V | Estáticas, una mano, sin contacto con el cuerpo. M, N y P apuntan hacia abajo |
+| 2 | E F G I S T Y | Estáticas, apoyadas en la cara o el cuerpo |
+| 3 | CH H J Z | Con movimiento |
+| 4 | Ñ Q W X | Con dos manos |
+
+#### Etapa 4.1 — Cerrar el puente JS ↔ nativo
+
+- [ ] Ejercicio práctico: cambiar un spec sin nitrogen ni recompilar (`worldLandmarks`), ver el error, y después hacerlo bien
+- [ ] `worldLandmarks` (puntos en metros, centrados en la mano) disponibles en JS: los vamos a guardar en cada muestra
+
+#### Etapa 4.2 — Estudiar el alfabeto y armar el catálogo
+
+- [ ] Aprender los parámetros de una seña (configuración, orientación, ubicación, movimiento, rasgos no manuales) → notas en `docs/aprendizaje/`
+- [ ] Confirmar la clasificación de las 28 letras con el video de la CAS (hay discrepancias, p. ej. J y Q)
+- [ ] **Paquete de lengua** `ml/languages/aed/` (ISO 639-3 de la LSA) con `letters.json`: letra, nivel, manos, movimiento, ubicación y color del guante. El entrenamiento **genera** el `manifest.json` (labels en orden, hash del modelo, versión de normalización) junto al `.tflite`. Va en un ADR
+
+#### Etapa 4.3 — Qué guarda cada muestra (antes de grabar a nadie)
+
+- [ ] **Decisión:** referencia del cuerpo para las letras de los niveles 2 y 3. Hand Landmarker no ve la cara: sin una referencia (p. ej. unos pocos puntos de Pose Landmarker: nariz, ojos, boca, hombros) E, F, G, I, S, T e Y se confunden con otras. Investigar costo y privacidad; evitar la malla completa de la cara (468 puntos, más identificable). Va en un ADR
+- [ ] Formato de la sesión con versión de esquema: persona (`P01`…), mano dominante, fecha, y por cada letra y ronda la **secuencia** de cuadros (timestamp, lateralidad, landmarks, worldLandmarks, referencia del cuerpo). Guardar secuencias sirve para todo: de una estática se toman cuadros sueltos; de una dinámica, la secuencia entera
+
+#### Etapa 4.4 — Guardar y exportar en el teléfono
+
+- [ ] **Decisión:** dónde se guarda (archivo por sesión en el almacenamiento privado de la app vs base SQLite) y cómo sale a la PC (compartir con el sistema o `adb pull`). Verificar estado de las librerías (`expo-file-system`, `expo-sqlite`, `expo-sharing`) antes de elegir
+- [ ] Borrar sesiones desde la app (si alguien retira su consentimiento)
+
+#### Etapa 4.5 — El guante
+
+- [ ] Componente Skia que dibuja la mano como un **guante** relleno (dedos redondeados + palma) a partir de los 21 puntos, con el **color de la letra**
+- [ ] Grabar la **referencia**: vos hacés cada letra (bien aprendida del video de la CAS) y esos puntos alimentan el guante de ejemplo. Así no usamos imágenes ajenas (la lámina de la CAS tiene todos los derechos reservados)
+
+#### Etapa 4.6 — Pantalla de captura tipo juego
+
+- [ ] Inicio: consentimiento, identificador sin nombre (`P01`…), mano dominante, elegir niveles (por defecto, todos)
+- [ ] Ciclo por letra: **preparate** (≈1,5 s, letra grande + guante de ejemplo; no se guarda) → **grabando** (≈2 s; ≈3 s para el nivel 3, con cuenta regresiva) → siguiente
+- [ ] **3 rondas** con las letras en orden aleatorio; botón **repetir** si salió mal
+- [ ] Modo de dos manos automático en el nivel 4 (`numHands` según la letra)
+- [ ] Resumen final: muestras por letra
+
+#### Etapa 4.7 — Piloto y grabación
+
+- [ ] Piloto con vos en el **teléfono** (no el emulador): ajustar tiempos y textos
+- [ ] Grabar a 3–5 personas, cada una con su consentimiento; exportar a `ml/data/` (fuera de git si tiene datos de personas: se decide en la etapa 4.4)
+
+#### Etapa 4.8 — Entrenamiento (nivel 1)
+
 - [ ] Entorno Python aislado (`venv`) con dependencias fijadas
-- [ ] Preprocesado: normalizar los puntos (posición, escala, mano izquierda o derecha, y rotación: con el teléfono acostado la mano llega girada respecto de la pantalla)
-- [ ] Entrenar el clasificador (Keras), evaluarlo (exactitud, matriz de confusión) y exportarlo a `.tflite`
+- [ ] Preprocesado: normalizar posición, escala y mano izquierda o derecha. **Conservar la orientación** respecto de la pantalla: M, N y P se distinguen porque apuntan hacia abajo
+- [ ] Entrenar el clasificador del nivel 1 (Keras), evaluarlo **dejando afuera a una persona por vez** (exactitud, matriz de confusión) y exportarlo a `.tflite`
 - [ ] Probar el `.tflite` en la PC con `ai-edge-litert`
 
-**Hecho cuando:** el modelo supera una exactitud acordada sobre datos que nunca vio en el entrenamiento, y se entiende por qué falla donde falla.
-**Aprendes:** datasets, normalización, train/val/test, redes densas, sobreajuste, métricas, cuantización.
+**Hecho cuando:** hay un dataset de 3–5 personas con las 28 letras, y el modelo del nivel 1 supera una exactitud acordada con personas que nunca vio, y se entiende por qué falla donde falla.
+**Aprendes:** protocolos de captura, consentimiento, formatos de datos versionados, normalización, train/val/test, redes densas, sobreajuste, métricas, cuantización.
 
-> Nota: algunas letras del alfabeto LSA llevan movimiento. En este hito trabajamos solo las
-> estáticas y dejamos anotadas las dinámicas para el Hito 6.
+> Los niveles 2, 3 y 4 se entrenan después (Hito 6), con los datos que ya grabamos acá.
 
 ### Hito 5 — Reconocimiento en la app
 
@@ -185,7 +236,8 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 ### Hito 6 — Modo aprender y señas dinámicas (futuro)
 
 - Modo juego: la app propone una letra, la haces y te dice si está bien
-- Señas con movimiento: secuencias de puntos y un modelo temporal (LSTM/GRU). Candidato: dataset **LSA64**, revisando su licencia
+- Entrenar los niveles 2, 3 y 4 del alfabeto con los datos grabados en el Hito 4 (referencia del cuerpo, secuencias y dos manos)
+- Señas con movimiento: secuencias de puntos y un modelo temporal (LSTM/GRU). Candidato: dataset **LSA64** (CC BY-NC-SA 4.0: uso no comercial, derivados con la misma licencia; tiene video de personas, usarlo solo en local)
 - Tests automatizados (lógica de normalización y suavizado) y CI básica
 
 ---
@@ -197,7 +249,9 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 | 1 | Runtime del clasificador en la app | Hito 5 |
 | ~~2~~ | ~~Librería para dibujar el esqueleto sobre la cámara~~ → Skia ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md)) | ✅ Hito 3 |
 | 3 | Gestor de entorno Python (`venv` + `pip` o alternativa) | Hito 4 |
-| 4 | Fuente de datos del alfabeto LSA (propia vs pública) | Hito 4 |
+| ~~4~~ | ~~Fuente de datos del alfabeto LSA (propia vs pública)~~ → propia, captura tipo juego ([ADR 0005](decisiones/0005-datos-propios-captura-tipo-juego.md)) | ✅ Hito 4 |
+| 5 | Referencia del cuerpo para letras apoyadas en la cara (Pose Landmarker u otra) | Hito 4, etapa 4.3 |
+| 6 | Almacenamiento en el teléfono (archivos vs SQLite) y exportación | Hito 4, etapa 4.4 |
 
 ---
 
