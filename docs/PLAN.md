@@ -237,6 +237,9 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] **Primera sesión real** (P-BCD2, Nico): 65,3% con todos los cuadros → 78,1% con solo los cuadros quietos (`--still 0.15`) → **80,5%** con la normal de la palma (normalización v2). La K y la R casi en 0%: se hicieron distinto en cada ronda (la persona buscaba la forma). La U y la V se separan por la orientación de la palma; una V se hizo con la orientación de la U
 - [x] **Medir la duda:** en cada toma, cuánto tiempo estuvo la mano cerca de su forma típica (`steadyMs`, igual en TS y Python). Si fue menos de 1 s, la app pide repetir la letra (hasta 3 intentos) y el resumen muestra cuántas veces costó cada letra
 - [x] **Más rondas a las letras difíciles:** `train.py` escribe `capture-plan.json` (+2 rondas si el modelo acierta menos del 50%, +1 si menos del 85%) y la app lo usa en las sesiones siguientes
+- [x] **Segunda sesión** (P-B2D5, Nico, mismo día): 91% de tomas firmes (antes 72%); K y R aprendidas. Dentro de la sesión, **92,5%** (K 100%, R 94%); entre sesiones, 68%, porque en la primera la R y una V se hicieron distinto. La sesión 1 queda fuera del entrenamiento (`data/excluded/`, `pull_sessions.py` no la vuelve a traer). Lo que queda difícil es O→D
+- [x] Descartar una sesión al terminarla (se borra del teléfono con sus tomas); si no se descarta, queda guardada
+- [ ] Al evaluar con varias personas: saber qué sesiones son de la misma persona (hoy cada sesión tiene su código), para no medir "persona nueva" con alguien que el modelo ya vio
 - [ ] Entrenar el nivel 1 con datos de varias personas. Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación
 - [ ] Analizar las clases marcadas con `confusableWith` (D y O): qué puntos las separan en los datos reales y cuánto se confunden
 
