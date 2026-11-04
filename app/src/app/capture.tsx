@@ -7,16 +7,21 @@ import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { useHandTracking } from '@/camera/use-hand-tracking';
 import { type CatalogEntry, catalog, entriesForLevel, letterOf } from '@/catalog/catalog';
 import { Button } from '@/components/button';
+import { randomUUID } from 'expo-crypto';
+
 import { createSession, discardTake, saveTake } from '@/dataset/db';
 import { shareSession } from '@/dataset/export';
 import { debugLog } from '@/debug/debug-log';
 
 const ROUNDS = 3;
 const PREPARE_MS = 1500;
-const RECORD_MS = 2000;
-const RECORD_MOVEMENT_MS = 3000;
-/** Below this many frames with the hand, a letter needs more takes. */
+const DEFAULT_RECORD_SECONDS = 3;
+const MAX_RECORD_SECONDS = 10;
+/** Below this many frames with the hand (whole session), a letter needs more takes. */
 const MIN_VALID_FRAMES = 20;
+/** A take with fewer frames with the hand than this is not saved: the letter is repeated. */
+const MIN_TAKE_VALID_FRAMES = 3;
+const MIN_TAKE_VALID_RATIO = 0.3;
 
 interface QueueItem {
   entry: CatalogEntry;
@@ -25,7 +30,20 @@ interface QueueItem {
 
 interface SessionSetup {
   sessionId: string;
+  participant: string;
   queue: QueueItem[];
+  recordMs: number;
+}
+
+/** "3", "2.5" or "2,5" -> seconds; null if it isn't a number in (0, MAX]. */
+function parseSeconds(text: string): number | null {
+  const value = Number(text.trim().replace(',', '.'));
+  return Number.isFinite(value) && value > 0 && value <= MAX_RECORD_SECONDS ? value : null;
+}
+
+/** Short pseudonymous code, e.g. P-7F3A. The session itself has a full UUID. */
+function newParticipantCode(): string {
+  return `P-${randomUUID().slice(0, 4).toUpperCase()}`;
 }
 
 export default function CaptureScreen() {
@@ -48,7 +66,7 @@ export default function CaptureScreen() {
 
   return (
     <CameraPermissionGate>
-      <CaptureRun sessionId={setup.sessionId} initialQueue={setup.queue} />
+      <CaptureRun setup={setup} />
     </CameraPermissionGate>
   );
 }
@@ -71,17 +89,22 @@ function SetupForm({
   entries: CatalogEntry[];
   onStart: (setup: SessionSetup) => void;
 }) {
-  const [participant, setParticipant] = useState('P01');
+  const [participant] = useState(newParticipantCode);
   const [dominantHand, setDominantHand] = useState<'left' | 'right'>('right');
+  const [secondsText, setSecondsText] = useState(String(DEFAULT_RECORD_SECONDS));
   const [consent, setConsent] = useState(false);
   const [starting, setStarting] = useState(false);
   const levelName = catalog.levels.find((l) => l.id === level)?.name ?? '';
+  const seconds = parseSeconds(secondsText);
 
   const start = async () => {
+    if (seconds == null) {
+      return;
+    }
     setStarting(true);
     try {
       const sessionId = await createSession({
-        participant: participant.trim(),
+        participant,
         dominantHand,
         language: catalog.language.code,
         catalogSchema: catalog.schemaVersion,
@@ -91,8 +114,10 @@ function SetupForm({
       for (let round = 1; round <= ROUNDS; round++) {
         queue.push(...shuffle(entries).map((entry) => ({ entry, round })));
       }
-      debugLog(`Sesión ${sessionId.slice(0, 8)} creada: ${queue.length} tomas`);
-      onStart({ sessionId, queue });
+      debugLog(
+        `Sesión ${sessionId.slice(0, 8)} (${participant}) creada: ${queue.length} tomas de ${seconds} s`,
+      );
+      onStart({ sessionId, participant, queue, recordMs: seconds * 1000 });
     } catch (error) {
       setStarting(false);
       debugLog(`Error al crear la sesión: ${String(error)}`, 'error');
@@ -107,18 +132,30 @@ function SetupForm({
           Nivel {level}: {levelName}
         </Text>
         <Text style={styles.message}>
-          {entries.length} letras × {ROUNDS} rondas en orden aleatorio, unos{' '}
-          {Math.ceil((entries.length * ROUNDS * (PREPARE_MS + RECORD_MS)) / 60000)} minutos.
+          {entries.length} letras × {ROUNDS} rondas en orden aleatorio
+          {seconds != null &&
+            `, unos ${Math.ceil((entries.length * ROUNDS * (PREPARE_MS + seconds * 1000)) / 60000)} minutos`}
+          .
         </Text>
 
-        <Text style={styles.label}>Código de la persona (sin nombre)</Text>
+        <Text style={styles.label}>Código asignado</Text>
+        <Text style={styles.code}>{participant}</Text>
+        <Text style={styles.hint}>
+          Sin nombres: anotalo si la persona quiere que después se borren sus datos.
+        </Text>
+
+        <Text style={styles.label}>Segundos de grabación por letra</Text>
         <TextInput
-          style={styles.input}
-          value={participant}
-          onChangeText={setParticipant}
-          autoCapitalize="characters"
-          autoCorrect={false}
+          style={[styles.input, seconds == null && styles.inputInvalid]}
+          value={secondsText}
+          onChangeText={setSecondsText}
+          keyboardType="decimal-pad"
         />
+        {seconds == null && (
+          <Text style={styles.warning}>
+            Tiene que ser un número mayor que 0 y hasta {MAX_RECORD_SECONDS}.
+          </Text>
+        )}
 
         <Text style={styles.label}>Mano dominante</Text>
         <View style={styles.row}>
@@ -153,7 +190,7 @@ function SetupForm({
         <Button
           label={starting ? 'Preparando…' : 'Empezar'}
           onPress={start}
-          disabled={!consent || participant.trim() === '' || starting}
+          disabled={!consent || seconds == null || starting}
         />
       </ScrollView>
     </SafeAreaView>
@@ -188,11 +225,14 @@ interface LastTake {
   validFrames: number;
 }
 
-function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQueue: QueueItem[] }) {
+function CaptureRun({ setup }: { setup: SessionSetup }) {
+  const { sessionId, participant, recordMs } = setup;
   const router = useRouter();
-  const [queue, setQueue] = useState(initialQueue);
+  const [queue, setQueue] = useState(setup.queue);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('prepare');
+  /** Shown while preparing the same letter again because the hand wasn't seen. */
+  const [retry, setRetry] = useState(false);
   const [lastTake, setLastTake] = useState<LastTake | null>(null);
   const [validFrames, setValidFrames] = useState<Record<string, number>>({});
   const [exporting, setExporting] = useState(false);
@@ -216,7 +256,6 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
       return () => clearTimeout(timer);
     }
 
-    const duration = current.entry.movement ? RECORD_MOVEMENT_MS : RECORD_MS;
     // Set by the cleanup: after saving, don't move the run forward if the screen
     // was left or the take was repeated in the meantime.
     let cancelled = false;
@@ -224,6 +263,20 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
       const take = stopRecording();
       const { frames } = take;
       const valid = frames.filter((frame) => frame.hands.length >= current.entry.hands).length;
+
+      // The hand wasn't seen: nothing worth saving. Same letter again.
+      if (valid < Math.max(MIN_TAKE_VALID_FRAMES, frames.length * MIN_TAKE_VALID_RATIO)) {
+        debugLog(
+          `${current.entry.id} r${current.round}: ${valid}/${frames.length} cuadros con mano, se repite`,
+          'warn',
+        );
+        if (!cancelled) {
+          setRetry(true);
+          setPhase('prepare');
+        }
+        return;
+      }
+
       try {
         const id = await saveTake({
           ...take,
@@ -233,12 +286,12 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
           startedAt: recordStartedAt.current,
         });
         debugLog(
-          `${current.entry.id} r${current.round}: ${frames.length} cuadros, ${valid} con mano`,
-          valid < frames.length / 2 ? 'warn' : 'info',
+          `${current.entry.id} r${current.round}: ${valid}/${frames.length} cuadros con mano`,
         );
         if (cancelled) {
           return;
         }
+        setRetry(false);
         setLastTake({ id, item: current, validFrames: valid });
         setValidFrames((counts) => ({
           ...counts,
@@ -257,14 +310,14 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
       } else {
         setPhase('done');
       }
-    }, duration);
+    }, recordMs);
     return () => {
       cancelled = true;
       clearTimeout(timer);
       // Leaving mid-take (repeat, back button): the frames are dropped.
       stopRecording();
     };
-  }, [phase, index, current, queue, sessionId, startRecording, stopRecording]);
+  }, [phase, index, current, queue, sessionId, recordMs, startRecording, stopRecording]);
 
   /** Discards the previous take and puts its letter next in line. */
   const repeatLast = async () => {
@@ -310,6 +363,9 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
       <SafeAreaView style={styles.fill}>
         <ScrollView contentContainerStyle={styles.form}>
           <Text style={styles.title}>¡Listo!</Text>
+          <Text style={styles.message}>
+            Código de esta sesión: <Text style={styles.codeInline}>{participant}</Text>
+          </Text>
           <Text style={styles.message}>Cuadros con la mano detectada, por letra:</Text>
           {entries.map((entry) => {
             const count = validFrames[entry.id] ?? 0;
@@ -353,7 +409,7 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
           <Text style={styles.variant}>Variante {current.entry.id}</Text>
         )}
         <Text style={[styles.status, recording && styles.statusRecording]}>
-          {recording ? '● Grabando' : 'Preparate…'}
+          {recording ? '● Grabando' : retry ? 'No vi tu mano: repetimos' : 'Preparate…'}
         </Text>
       </View>
       {lastTake != null && (
@@ -403,6 +459,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  inputInvalid: {
+    borderColor: '#D92626',
+    borderWidth: 2,
+  },
+  code: {
+    fontFamily: 'monospace',
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  codeInline: {
+    fontFamily: 'monospace',
+    fontWeight: '700',
+  },
+  hint: {
+    color: '#6B7280',
   },
   row: {
     flexDirection: 'row',
