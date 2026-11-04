@@ -191,7 +191,7 @@ se confirma en la etapa 4.2):
   - **Pose Landmarker lite** (puntos 0–12): ~66 ms, 7 FPS en total
   - Sin referencia: 15 FPS. La orientación de los puntos quedó verificada en los dos (ojos arriba de la boca; nariz arriba de los hombros)
   - *Provisional:* el pecho (F) se estima desde la cara; si no alcanza, pose solo para la F
-- [ ] La captura la activa sola en las letras con `location` distinta de `neutral` (niveles 2 y 3)
+- [x] La captura la activa sola en las letras con `location` distinta de `neutral` (niveles 2 y 3). El log de depuración cuenta en cuántos cuadros se vio la cara
 - [x] Formato de la sesión versionado: persona (código automático), mano dominante, fecha, y por cada letra y ronda la **secuencia** de cuadros (tiempo, lateralidad, landmarks, worldLandmarks y `body`, la referencia del cuerpo). De una estática se toman cuadros sueltos; de una dinámica, la secuencia entera
 
 #### Etapa 4.4 — Guardar y exportar en el teléfono
@@ -222,7 +222,8 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] Modo de dos manos automático según la letra (`numHands` = `hands` del catálogo)
 - [x] Resumen final: cuadros con mano por letra (avisa si hay pocos) y exportar
 - [x] **Log de depuración** oculto (pulsación larga sobre el título del menú): sesiones, tomas con cuadros y cuadros con mano, exportaciones y errores
-- [ ] Habilitar los niveles 2–4 (necesitan la cara y el guante)
+- [x] Nivel 2 habilitado (con la referencia de la cara; el guante sigue pendiente)
+- [ ] Habilitar los niveles 3 y 4 (movimiento y dos manos)
 
 #### Etapa 4.7 — Piloto y grabación
 

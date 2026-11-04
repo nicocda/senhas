@@ -271,9 +271,12 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
   const recordStartedAt = useRef(0);
 
   const current = phase === 'done' ? null : queue[index];
-  const { frameOutput, landmarks, imageSize, startRecording, stopRecording } = useHandTracking({
-    numHands: current?.entry.hands ?? 1,
-  });
+  const { frameOutput, landmarks, body, imageSize, startRecording, stopRecording } =
+    useHandTracking({
+      numHands: current?.entry.hands ?? 1,
+      // Letters signed on the face or body need to know where the face is (ADR 0009).
+      bodyReference: current != null && current.entry.location !== 'neutral' ? 'face' : 'none',
+    });
 
   useEffect(() => {
     if (current == null) {
@@ -335,7 +338,10 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
           startedAt: recordStartedAt.current,
         });
         debugLog(
-          `${current.entry.id} r${current.round} intento ${attempt + 1}: ${valid}/${frames.length} con mano, ${Math.round(steady)} ms firme`,
+          `${current.entry.id} r${current.round} intento ${attempt + 1}: ${valid}/${frames.length} con mano, ${Math.round(steady)} ms firme` +
+            (current.entry.location !== 'neutral'
+              ? `, cara en ${frames.filter((frame) => frame.body.length > 0).length}`
+              : ''),
           isSteady ? 'info' : 'warn',
         );
         if (cancelled) {
@@ -516,7 +522,12 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
   const recording = phase === 'record';
   return (
     <View style={styles.fill}>
-      <HandCamera frameOutput={frameOutput} landmarks={landmarks} imageSize={imageSize} />
+      <HandCamera
+        frameOutput={frameOutput}
+        landmarks={landmarks}
+        body={body}
+        imageSize={imageSize}
+      />
       <View style={styles.topBar}>
         <Text style={styles.progress}>
           Ronda {current.round}/{ROUNDS + extraRounds(current.entry)} · {index + 1}/{queue.length}
