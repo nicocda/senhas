@@ -181,7 +181,7 @@ se confirma en la etapa 4.2):
 #### Etapa 4.2 — Estudiar el alfabeto y armar el catálogo
 
 - [x] Aprender los parámetros de una seña (configuración, orientación, ubicación, movimiento, rasgos no manuales) y qué ve nuestro sistema de cada uno → [notas](aprendizaje/parametros-de-la-sena.md)
-- [ ] **(Nico)** Confirmar la clasificación de las 28 letras con el video de la CAS (hay discrepancias, p. ej. J y Q) y marcar `verified: true` en `letters.json`. La lista para revisar está en las [notas](aprendizaje/parametros-de-la-sena.md#para-confirmar-con-el-video-de-la-cas)
+- [x] **(Nico)** Confirmar la clasificación de las 28 letras con el video de la CAS: todo coincide. Aporte: **C y E son un par mínimo** (misma forma de mano; la E se hace en el ojo), marcado con `sameHandshapeAs`. Las dos variantes de la V son clases propias (`V1`, `V2`) que se reconocen como V
 - [x] **Paquete de lengua** `ml/languages/aed/` (ISO 639-3 de la LSA) con [`letters.json`](../ml/languages/aed/letters.json): letra, nivel, manos, movimiento, ubicación y color del guante. El entrenamiento **genera** el `manifest.json` junto al `.tflite` ([ADR 0006](decisiones/0006-paquetes-de-lengua.md))
 
 #### Etapa 4.3 — Qué guarda cada muestra (antes de grabar a nadie)
@@ -228,7 +228,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 - [ ] Entorno Python aislado (`venv`) con dependencias fijadas
 - [ ] Preprocesado: normalizar posición, escala y mano izquierda o derecha. **Conservar la orientación** respecto de la pantalla: M, N y P se distinguen porque apuntan hacia abajo
-- [ ] Entrenar el clasificador del nivel 1 (Keras), evaluarlo **dejando afuera a una persona por vez** (exactitud, matriz de confusión) y exportarlo a `.tflite`
+- [ ] Entrenar el clasificador del nivel 1 (Keras). Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación, evaluarlo **dejando afuera a una persona por vez** (exactitud, matriz de confusión) y exportarlo a `.tflite`
 - [ ] Probar el `.tflite` en la PC con `ai-edge-litert`
 
 **Hecho cuando:** hay un dataset de 3–5 personas con las 28 letras, y el modelo del nivel 1 supera una exactitud acordada con personas que nunca vio, y se entiende por qué falla donde falla.
