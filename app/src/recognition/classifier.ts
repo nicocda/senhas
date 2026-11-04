@@ -17,7 +17,9 @@ interface DenseLayer {
 
 export interface ModelFile {
   language: string;
-  level: number;
+  /** level-1, level-2, static... */
+  name: string;
+  level: string;
   labels: string[];
   letters: string[];
   normalization: {
@@ -57,7 +59,7 @@ export class Classifier {
     // A model only works with the normalization it was trained with (ADR 0008).
     if (model.normalization.version !== NORMALIZATION_VERSION) {
       throw new Error(
-        `Model for level ${model.level} uses normalization v${model.normalization.version}, the app v${NORMALIZATION_VERSION}. Retrain it.`,
+        `Model ${model.name} uses normalization v${model.normalization.version}, the app v${NORMALIZATION_VERSION}. Retrain it.`,
       );
     }
     this.labels = model.labels;
