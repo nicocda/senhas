@@ -168,8 +168,8 @@ se confirma en la etapa 4.2):
 
 | Nivel | Letras | Qué tienen |
 |---|---|---|
-| 1 | A B C D K L M N O P R U V | Estáticas, una mano, sin contacto con el cuerpo. M, N y P apuntan hacia abajo |
-| 2 | E F G I S T Y | Estáticas, apoyadas en la cara o el cuerpo |
+| 1 | A B C D K L M N O P R U V1 | Estáticas, una mano, sin contacto con el cuerpo. M, N y P apuntan hacia abajo |
+| 2 | E F G I S T V2 Y | Estáticas, apoyadas en la cara o el cuerpo |
 | 3 | CH H J Z | Con movimiento |
 | 4 | Ñ Q W X | Con dos manos |
 
