@@ -16,9 +16,10 @@ export type {
 export type { HandLandmarkerOptions } from './specs/HandLandmarkerFactory.nitro';
 
 const DEFAULT_OPTIONS: HandLandmarkerOptions = {
-  // Some LSA signs use both hands. In VIDEO mode MediaPipe skips palm detection
-  // only while it tracks numHands hands, so with one hand visible it runs every frame.
-  numHands: 2,
+  // Two hands cost almost twice as much: the landmarks model runs once per hand,
+  // and in VIDEO mode palm detection only stops once numHands hands are tracked.
+  // Opt into 2 for two-handed signs.
+  numHands: 1,
   minHandDetectionConfidence: 0.5,
   minHandPresenceConfidence: 0.5,
   minTrackingConfidence: 0.5,

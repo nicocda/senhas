@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
@@ -35,7 +35,9 @@ export default function CameraScreen() {
 
 function CameraPreview() {
   const device = useCameraDevice('front');
-  const { frameOutput, landmarks, imageSize, stats } = useHandTracking();
+  // One hand by default: two cost almost twice as much. A sign could switch this later.
+  const [numHands, setNumHands] = useState<1 | 2>(1);
+  const { frameOutput, landmarks, imageSize, stats } = useHandTracking({ numHands });
   const isForeground = useIsForeground();
 
   if (device == null) {
@@ -62,6 +64,12 @@ function CameraPreview() {
       <Text style={styles.stats}>
         {stats.fps} FPS · copia {stats.conversionMs} ms · MediaPipe {stats.inferenceMs} ms
       </Text>
+      <View style={styles.bottomBar}>
+        <Button
+          label={numHands === 1 ? '1 mano' : '2 manos'}
+          onPress={() => setNumHands(numHands === 1 ? 2 : 1)}
+        />
+      </View>
     </View>
   );
 }
@@ -99,6 +107,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 48,
+    alignSelf: 'center',
   },
   stats: {
     position: 'absolute',

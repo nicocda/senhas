@@ -21,8 +21,10 @@ export interface TrackingStats {
  * Landmarks go to a shared value so the overlay can redraw on the UI thread
  * without a React render; stats reach React only once per second.
  */
-export function useHandTracking() {
-  const landmarker = useMemo(() => createHandLandmarker(), []);
+export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
+  // MediaPipe can't change numHands on a live landmarker, so a new value creates a
+  // new one; the effect below disposes the old one.
+  const landmarker = useMemo(() => createHandLandmarker({ numHands }), [numHands]);
   useEffect(() => () => landmarker.dispose(), [landmarker]);
 
   /**
