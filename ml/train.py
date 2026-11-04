@@ -172,6 +172,7 @@ def main() -> None:
     out_dir = args.out_dir or LANGUAGES_DIR / args.language / "models" / f"level-{args.level}"
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "model.tflite").write_bytes(tflite)
+    weights = export_weights(model)
     manifest = {
         "language": args.language,
         "level": args.level,
@@ -196,8 +197,39 @@ def main() -> None:
     }
     for directory in (out_dir, run_dir):
         write_json(directory / "manifest.json", manifest)
+    # The app runs this tiny network itself (app/src/recognition): weights + what it
+    # needs to prepare the input the same way.
+    write_json(
+        out_dir / "model.json",
+        {
+            "language": args.language,
+            "level": args.level,
+            "labels": labels,
+            "letters": manifest["letters"],
+            "normalization": manifest["normalization"],
+            "layers": weights,
+        },
+    )
     write_capture_plan(args.language, args.level, recall, accuracy)
     print(f"Model: {out_dir}\nRun:   {run_dir}")
+
+
+def export_weights(model: tf.keras.Model) -> list[dict]:
+    """Dense layers as plain numbers: output = activation(input · weights + bias).
+    Dropout only acts while training, so it's left out."""
+    layers = []
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.Dense):
+            kernel, bias = layer.get_weights()
+            layers.append(
+                {
+                    "activation": layer.get_config()["activation"],
+                    # weights[i][j]: from input i to neuron j.
+                    "weights": [[round(float(v), 7) for v in row] for row in kernel],
+                    "bias": [round(float(v), 7) for v in bias],
+                }
+            )
+    return layers
 
 
 def write_json(path: Path, data: dict) -> None:
