@@ -225,10 +225,16 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] Nivel 2 habilitado (con la referencia de la cara; el guante sigue pendiente)
 - [x] **Nivel 3 habilitado** (CH, H, J, Z): sin la regla de quietud (moverse es la letra); en su lugar se registra cuánto recorrió la punta del índice, en distancias entre ojos, para aprender qué es un movimiento normal antes de poner una regla
 - [x] Primera sesión del nivel 3 (P-924B): con los movimientos rápidos la mano se pierde (en la Z r2, 23/45 cuadros con mano; ~9 FPS con la cara). El momento del movimiento varía mucho dentro de la toma. El recorrido va de 9 a 28 distancias entre ojos (la Z, la que más); la CH casi no se desplaza (rota)
-- [ ] Modelo de secuencias para el nivel 3: con pocas secuencias, comparar **DTW + vecino más cercano** (alinea secuencias de distinta velocidad; anda con pocos ejemplos) contra una red recurrente chica (GRU)
+- [x] Segunda sesión del nivel 3 (P-9784), **más lenta de lo natural** (lo hizo así para que el sistema lo tome): la mano se siguió en casi todos los cuadros y cada letra tiene su recorrido (CH ≈5, J ≈8–11, Z ≈13–18, H ≈16–17)
+- [x] **Nivel 3 con DTW + vecino más cercano** (`ml/signs/sequences.py`, `train_sequences.py`): ubicación respecto de los ojos + normal de la palma, recortando lo quieto y remuestreando a 32 cuadros. **96% entre sesiones** (con las plantillas lentas reconoce 12/12 de la sesión a velocidad normal: la velocidad casi no importa), 100% dejando afuera una toma. Umbral de distancia 1,70 para responder "no sé"
+- [ ] Grabar el nivel 3 **a velocidad natural**: el problema de ir rápido no es la velocidad sino que la mano se pierde en los cuadros borrosos
+- [ ] (descartado por ahora) red recurrente para el nivel 3: DTW alcanza con pocos datos; con pocas secuencias, comparar **DTW + vecino más cercano** (alinea secuencias de distinta velocidad; anda con pocos ejemplos) contra una red recurrente chica (GRU)
 - [x] **Nivel 4 habilitado** (Ñ, Q, W, X): dos manos; la regla de quietud mide la mano dominante (según la lateralidad de MediaPipe)
-- [ ] Modelo del nivel 4: forma de las dos manos y posición de una respecto de la otra
-- [ ] **Integrar todo en Detectar**: con dos manos → modelo del nivel 4; con una mano que se mueve → nivel 3; quieta → modelo estático
+- [x] Primera sesión del nivel 4 (P-884A): dos manos en el 99% de los cuadros, siempre una izquierda y una derecha
+- [x] **Modelo del nivel 4**: forma de la mano dominante y de la otra (66 + 66) + posición de la otra respecto de la muñeca dominante (4). **100%** dejando afuera una ronda (4 letras muy distintas, una sesión)
+- [x] **Todo integrado en Detectar** ("Todas las letras", `recognition/live.ts`): con dos manos → nivel 4; con una mano que recorrió ≥3 distancias entre ojos en 2,5 s → DTW (si encuentra una plantilla cercana, la muestra 1,5 s); si no → modelo estático. Umbrales elegidos con los datos (velocidad del índice en letras quietas vs en movimiento)
+- [ ] Probar en vivo la integración, sobre todo que las transiciones entre letras estáticas no disparen letras de movimiento
+- [x] `pull_sessions.py` lee la base del teléfono: ya no hace falta exportar
 
 #### Etapa 4.7 — Piloto y grabación
 
