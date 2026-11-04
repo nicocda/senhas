@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from .catalog import Entry
-from .features import POINT_FEATURES, normalize_hand
+from .features import POINT_FEATURES, hand_location, normalize_hand
 
 FORMAT = "senhas-session"
 SUPPORTED_FORMAT_VERSIONS = {1, 2}
@@ -63,14 +63,20 @@ def still_mask(features: list[np.ndarray], threshold: float) -> list[bool]:
 
 
 def samples_from_sessions(
-    sessions: list[dict], entries: list[Entry], still_threshold: float | None = None
+    sessions: list[dict],
+    entries: list[Entry],
+    still_threshold: float | None = None,
+    with_location: bool = False,
 ) -> list[Sample]:
     """Every frame where the expected number of hands was detected becomes a sample.
-    With `still_threshold`, only the frames where the hand is still (see still_mask)."""
+    With `still_threshold`, only the frames where the hand is still (see still_mask).
+    With `with_location`, the hand's location relative to the face is appended, and
+    frames without a face are skipped."""
     by_id = {entry.id: entry for entry in entries}
     samples = []
     for session in sessions:
         info = session["session"]
+        dominant = info["dominantHand"]
         for take in session["takes"]:
             entry = by_id.get(take["entryId"])
             if entry is None:
@@ -79,10 +85,22 @@ def samples_from_sessions(
             for frame in take["frames"]:
                 hands = frame["hands"]
                 if len(hands) != entry.hands or entry.hands != 1:
-                    continue  # level 1 only for now: exactly one hand
-                vector = normalize_hand(hands[0]["world"], info["dominantHand"])
-                if vector is not None:
-                    features.append(vector)
+                    continue  # one-handed letters only for now
+                vector = normalize_hand(hands[0]["world"], dominant)
+                if vector is None:
+                    continue
+                if with_location:
+                    location = hand_location(
+                        hands[0]["landmarks"],
+                        frame.get("body", []),
+                        take.get("imageWidth"),
+                        take.get("imageHeight"),
+                        dominant,
+                    )
+                    if location is None:
+                        continue
+                    vector = np.concatenate([vector, location])
+                features.append(vector)
             keep = still_mask(features, still_threshold) if still_threshold else [True] * len(features)
             samples.extend(
                 Sample(
