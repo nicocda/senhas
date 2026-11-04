@@ -31,6 +31,15 @@ export interface HandDetection {
   conversionMs: number;
   /** Native time spent in MediaPipe, in milliseconds. */
   inferenceMs: number;
+  /**
+   * Body reference points, normalized to the upright image like the hands. Empty if
+   * disabled or not found. `face`: left eye, right eye, nose tip, mouth, left ear
+   * tragion, right ear tragion (z = 0). `pose`: Pose Landmarker points 0-12 (nose,
+   * eyes, ears, mouth corners, shoulders).
+   */
+  body: Landmark[];
+  /** Native time spent in the body reference model, in milliseconds (0 if disabled). */
+  bodyMs: number;
 }
 
 export interface HandLandmarker extends HybridObject<{ android: 'kotlin' }> {

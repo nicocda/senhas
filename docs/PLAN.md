@@ -186,12 +186,13 @@ se confirma en la etapa 4.2):
 
 #### Etapa 4.3 — Qué guarda cada muestra (antes de grabar a nadie)
 
-- [ ] **Referencia del cuerpo, activable y desactivable** (como `numHands`): Hand Landmarker no ve la cara, y sin una referencia E, F, G, I, S, T e Y se confunden con otras. Se guardan **puntos mínimos**, nunca la malla de la cara (468 puntos, mucho más identificable). Candidatos, a medir en el teléfono antes de elegir (va en un ADR):
-  - **Face Detector** (BlazeFace): 6 puntos (ojos, punta de la nariz, boca, tragos de las orejas), ~3 ms en CPU en un Pixel 6. Muy barato, pero no ve el pecho ni el cuello (letra F)
-  - **Pose Landmarker** (variante lite): de sus 33 puntos guardamos solo 0–12 (nariz, ojos, orejas, comisuras de la boca, hombros). Cubre pecho y cuello, pero cuesta más
-  - Alcanza con una ubicación **aproximada**: con el Face Detector, cuello y pecho se pueden **estimar** a partir del cuadro de la cara (una o dos alturas de cara por debajo del mentón). Si eso alcanza para separar la F, gana el Face Detector por liviano. Se prueban ambos y se descarta uno
-- [ ] La captura la activa sola en los niveles que la necesitan (2 y 3)
-- [ ] Formato de la sesión con versión de esquema: persona (`P01`…), mano dominante, fecha, y por cada letra y ronda la **secuencia** de cuadros (timestamp, lateralidad, landmarks, worldLandmarks, referencia del cuerpo). Guardar secuencias sirve para todo: de una estática se toman cuadros sueltos; de una dinámica, la secuencia entera
+- [x] **Referencia del cuerpo, activable** (`bodyReference: 'none' | 'face' | 'pose'`, apagada por defecto), con **puntos mínimos**, nunca la malla de la cara. Los dos candidatos implementados en el plugin y medidos en el teléfono ([ADR 0009](decisiones/0009-referencia-del-cuerpo.md)):
+  - **Face Detector** (6 puntos): ~31 ms, 9 FPS en total. **Elegido**
+  - **Pose Landmarker lite** (puntos 0–12): ~66 ms, 7 FPS en total
+  - Sin referencia: 15 FPS. La orientación de los puntos quedó verificada en los dos (ojos arriba de la boca; nariz arriba de los hombros)
+  - *Provisional:* el pecho (F) se estima desde la cara; si no alcanza, pose solo para la F
+- [ ] La captura la activa sola en las letras con `location` distinta de `neutral` (niveles 2 y 3)
+- [x] Formato de la sesión versionado: persona (código automático), mano dominante, fecha, y por cada letra y ronda la **secuencia** de cuadros (tiempo, lateralidad, landmarks, worldLandmarks y `body`, la referencia del cuerpo). De una estática se toman cuadros sueltos; de una dinámica, la secuencia entera
 
 #### Etapa 4.4 — Guardar y exportar en el teléfono
 
@@ -214,8 +215,9 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 - [x] **Menú inicial** con la cámara apagada: *Detectar* (la vista en vivo), *Grabar datos* (4 niveles, desactivados hasta esta etapa) y *Ejercicios* (por definir). Al volver al menú, la cámara se cierra y el landmarker se libera
 - [x] **Versión mínima del nivel 1**, para el piloto (sin guante ni cara): el catálogo se lee de `ml/` (Metro con `watchFolders`), el hook graba los cuadros entre `startRecording` y `stopRecording`
-- [x] Inicio: consentimiento, identificador sin nombre (`P01`…), mano dominante. *Pendiente:* elegir varios niveles en una sesión
-- [x] Ciclo por letra: **preparate** (1,5 s, letra grande con su color; no se guarda) → **grabando** (2 s; 3 s con movimiento) → siguiente. *Pendiente:* guante de ejemplo y cuenta regresiva
+- [x] Inicio: consentimiento, **código asignado automáticamente** (`P-7F3A`, sin nombres), mano dominante y **segundos de grabación** (3 por defecto, entre 0 y 10). *Pendiente:* elegir varios niveles en una sesión
+- [x] Ciclo por letra: **preparate** (1,5 s, letra grande con su color; no se guarda) → **grabando** (los segundos elegidos) → siguiente. Si la mano no se vio (menos del 30% de los cuadros), la toma no se guarda y **se repite la letra**. *Pendiente:* guante de ejemplo y cuenta regresiva
+- [x] El esqueleto se muestra también mientras se graba: confirma que la mano se está detectando
 - [x] **3 rondas** con las letras en orden aleatorio; botón **repetir** la última toma
 - [x] Modo de dos manos automático según la letra (`numHands` = `hands` del catálogo)
 - [x] Resumen final: cuadros con mano por letra (avisa si hay pocos) y exportar
@@ -266,7 +268,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 | ~~2~~ | ~~Librería para dibujar el esqueleto sobre la cámara~~ → Skia ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md)) | ✅ Hito 3 |
 | ~~3~~ | ~~Gestor de entorno Python~~ → `venv` + `pip` con dependencias fijadas | ✅ Hito 4 |
 | ~~4~~ | ~~Fuente de datos del alfabeto LSA (propia vs pública)~~ → propia, captura tipo juego ([ADR 0005](decisiones/0005-datos-propios-captura-tipo-juego.md)) | ✅ Hito 4 |
-| 5 | Referencia del cuerpo, activable: Face Detector (6 puntos) vs Pose Landmarker lite (puntos 0–12). Se mide en el teléfono | Hito 4, etapa 4.3 |
+| ~~5~~ | ~~Referencia del cuerpo~~ → Face Detector, activable (provisional hasta los datos del nivel 2) ([ADR 0009](decisiones/0009-referencia-del-cuerpo.md)) | ✅ Hito 4, etapa 4.3 |
 | ~~6~~ | ~~Almacenamiento en el teléfono~~ → SQLite + exportar/importar sesiones como archivo | ✅ Hito 4, etapa 4.4 |
 
 ---

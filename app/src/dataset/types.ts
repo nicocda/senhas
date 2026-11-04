@@ -21,4 +21,9 @@ export interface RecordedFrame {
   t: number;
   /** Empty when no hand was detected in this frame. */
   hands: RecordedHand[];
+  /**
+   * Body reference points, flat [x0, y0, z0, ...], normalized to the upright image.
+   * Empty when disabled or not found. Face: 6 keypoints; pose: points 0-12.
+   */
+  body: number[];
 }
