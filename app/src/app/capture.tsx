@@ -274,8 +274,9 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
   const { frameOutput, landmarks, body, imageSize, startRecording, stopRecording } =
     useHandTracking({
       numHands: current?.entry.hands ?? 1,
-      // Letters signed on the face or body need to know where the face is (ADR 0009).
-      bodyReference: current != null && current.entry.location !== 'neutral' ? 'face' : 'none',
+      // Always the face (ADR 0009): letters signed on it need it, and a single model
+      // for all letters needs every take recorded the same way (C vs E).
+      bodyReference: 'face',
     });
 
   useEffect(() => {
@@ -339,7 +340,7 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
         });
         debugLog(
           `${current.entry.id} r${current.round} intento ${attempt + 1}: ${valid}/${frames.length} con mano, ${Math.round(steady)} ms firme` +
-            (current.entry.location !== 'neutral'
+            (frames.length > 0
               ? `, cara en ${frames.filter((frame) => frame.body.length > 0).length}`
               : ''),
           isSteady ? 'info' : 'warn',

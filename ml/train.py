@@ -25,7 +25,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, classificati
 
 from signs.catalog import LANGUAGES_DIR, load_catalog
 from signs.features import LOCATION_VERSION, NORMALIZATION_VERSION
-from signs.sessions import load_sessions, samples_from_sessions
+from signs.sessions import load_sessions, samples_from_sessions, share_of_takes_with_face
 
 ML_DIR = Path(__file__).resolve().parent
 
@@ -74,7 +74,11 @@ def folds(groups: np.ndarray):
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--language", default="aed")
-    parser.add_argument("--level", type=int, default=1)
+    parser.add_argument(
+        "--level",
+        default="1",
+        help='a catalog level (1, 2...) or "static": every one-handed letter without movement, one model',
+    )
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument(
@@ -85,19 +89,31 @@ def main() -> None:
     )
     parser.add_argument("--no-location", action="store_true", help="hand shape only, even on face letters")
     parser.add_argument("--data-dir", type=Path, help="default: languages/<language>/data")
-    parser.add_argument("--out-dir", type=Path, help="default: languages/<language>/models/level-<n>")
+    parser.add_argument("--out-dir", type=Path, help="default: languages/<language>/models/<model name>")
     args = parser.parse_args()
 
     catalog = load_catalog(args.language)
-    entries = catalog.level(args.level)
+    if args.level == "static":
+        # One model for every static one-handed letter: levels only organize capture.
+        entries = [e for e in catalog.entries if e.hands == 1 and not e.movement]
+        model_name, plan_level = "static", None
+    else:
+        entries = catalog.level(int(args.level))
+        model_name, plan_level = f"level-{args.level}", int(args.level)
     labels = [entry.id for entry in entries]
     data_dir = args.data_dir or LANGUAGES_DIR / args.language / "data"
     sessions = load_sessions(data_dir)
-    # Letters signed on the face or body also need where the hand is (ADR 0009).
-    with_location = not args.no_location and any(entry.location != "neutral" for entry in entries)
+    # Letters signed on the face or body also need where the hand is (ADR 0009). Only
+    # if every take of these letters was recorded with the face: mixing takes with and
+    # without it would teach the model that "no face data" means some letters.
+    needs_location = any(entry.location != "neutral" for entry in entries)
+    face_share = share_of_takes_with_face(sessions, {entry.id for entry in entries})
+    with_location = not args.no_location and needs_location and face_share == 1.0
+    if needs_location and not with_location and not args.no_location:
+        print(f"Hand shape only: {face_share:.0%} of the takes have the face (location needs 100%)")
     samples = samples_from_sessions(sessions, entries, args.still, with_location)
     if not samples:
-        raise SystemExit(f"No samples for level {args.level} in {data_dir}")
+        raise SystemExit(f"No samples for {model_name} in {data_dir}")
 
     x = np.stack([sample.features for sample in samples])
     y = np.array([labels.index(sample.entry_id) for sample in samples])
@@ -109,7 +125,9 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Classes without samples: {missing}")
 
-    if len(participants) >= 2:
+    # Leaving a person out only makes sense if each person has every letter.
+    letters_per_person = {p: {s.entry_id for s in samples if s.participant == p} for p in participants}
+    if len(participants) >= 2 and all(len(v) == len(labels) for v in letters_per_person.values()):
         strategy = "leave-one-person-out"
         groups = np.array([sample.participant for sample in samples])
     else:
@@ -149,7 +167,7 @@ def main() -> None:
     run_dir = ML_DIR / "runs" / time.strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True)
     ConfusionMatrixDisplay(matrix, display_labels=labels).plot(cmap="Blues", colorbar=False)
-    plt.title(f"{args.language} level {args.level}: {strategy}, {accuracy:.1%}")
+    plt.title(f"{args.language} {model_name}: {strategy}, {accuracy:.1%}")
     plt.savefig(run_dir / "confusion.png", dpi=150, bbox_inches="tight")
 
     # Final model: trained on everything, it's the one the app gets.
@@ -169,12 +187,13 @@ def main() -> None:
         agree += int(interpreter.get_tensor(output_index).argmax() == keras_pred[i])
     print(f".tflite agrees with Keras on {agree}/{len(x)} frames")
 
-    out_dir = args.out_dir or LANGUAGES_DIR / args.language / "models" / f"level-{args.level}"
+    out_dir = args.out_dir or LANGUAGES_DIR / args.language / "models" / model_name
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "model.tflite").write_bytes(tflite)
     weights = export_weights(model)
     manifest = {
         "language": args.language,
+        "name": model_name,
         "level": args.level,
         "catalogSchema": catalog.schema_version,
         "labels": labels,
@@ -203,6 +222,7 @@ def main() -> None:
         out_dir / "model.json",
         {
             "language": args.language,
+            "name": model_name,
             "level": args.level,
             "labels": labels,
             "letters": manifest["letters"],
@@ -210,7 +230,8 @@ def main() -> None:
             "layers": weights,
         },
     )
-    write_capture_plan(args.language, args.level, recall, accuracy)
+    if plan_level is not None:
+        write_capture_plan(args.language, plan_level, recall, accuracy)
     print(f"Model: {out_dir}\nRun:   {run_dir}")
 
 

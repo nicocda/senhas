@@ -5,10 +5,17 @@ import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { type LiveFrame, useHandTracking } from '@/camera/use-hand-tracking';
 import { catalog } from '@/catalog/catalog';
 import { Button } from '@/components/button';
-import { classifierFor, classifyHand, type RecognitionLevel } from '@/recognition/models';
+import { classifierFor, classifyHand, type RecognitionMode } from '@/recognition/models';
 import { PredictionSmoother, type SmoothedPrediction } from '@/recognition/smoothing';
 
 const colorOf = new Map(catalog.letters.map((entry) => [entry.id, entry.color]));
+
+const MODES: RecognitionMode[] = ['all', 1, 2];
+const MODE_LABELS: Record<RecognitionMode, string> = {
+  all: 'Todas las letras',
+  1: 'Letras nivel 1',
+  2: 'Letras nivel 2',
+};
 
 export default function DetectScreen() {
   return (
@@ -21,12 +28,13 @@ export default function DetectScreen() {
 function LiveDetection() {
   // One hand by default: two cost almost twice as much. A sign could switch this later.
   const [numHands, setNumHands] = useState<1 | 2>(1);
-  // Which letters to recognize. Level 2 needs the face to know where the hand is.
-  const [level, setLevel] = useState<RecognitionLevel>(1);
+  // Which letters to recognize: all of them by default. A model that uses the
+  // hand's location turns the face reference on.
+  const [mode, setMode] = useState<RecognitionMode>('all');
   const [prediction, setPrediction] = useState<SmoothedPrediction | null>(null);
   const [hasHand, setHasHand] = useState(false);
 
-  const classifier = useMemo(() => classifierFor(level), [level]);
+  const classifier = useMemo(() => classifierFor(mode), [mode]);
   const smoother = useRef(new PredictionSmoother());
 
   const onLiveFrame = useCallback(
@@ -61,10 +69,10 @@ function LiveDetection() {
     onLiveFrame,
   });
 
-  const changeLevel = () => {
+  const nextMode = () => {
     smoother.current.reset();
     setPrediction(null);
-    setLevel(level === 1 ? 2 : 1);
+    setMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length]);
   };
 
   return (
@@ -100,7 +108,7 @@ function LiveDetection() {
           label={numHands === 1 ? '1 mano' : '2 manos'}
           onPress={() => setNumHands(numHands === 1 ? 2 : 1)}
         />
-        <Button label={`Letras nivel ${level}`} onPress={changeLevel} />
+        <Button label={MODE_LABELS[mode]} onPress={nextMode} />
       </View>
     </View>
   );

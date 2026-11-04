@@ -258,7 +258,10 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] "Detectar" muestra la letra reconocida con su color y su confianza; se elige reconocer las letras del nivel 1 o del nivel 2 (este último enciende la cara)
 - [ ] Probarlo en vivo con las letras de los niveles 1 y 2
 - [x] Suavizado: votación sobre los últimos 10 cuadros (gana con 6 votos y 60% de confianza media; si no, "¿…?")
-- [ ] Reconocer niveles 1 y 2 a la vez (hoy se elige uno): hacen falta datos del nivel 1 con la cara, para separar la C de la E
+- [x] **Un solo modelo para todas las letras estáticas de una mano** (`train.py --level static`, 21 clases): los niveles quedan solo para organizar la captura. En Detectar, el modo "Todas las letras" es el de por defecto (también se puede elegir nivel 1 o 2). Con los datos actuales, **89,8%** solo con la forma de la mano (la C y la E salen bien por la orientación de la palma)
+- [x] La captura enciende la cara en **todos** los niveles. Cuando todas las tomas tengan la cara (una sesión nueva del nivel 1), `train.py` entrena el modelo combinado **con ubicación**; mientras tanto avisa y usa solo la forma
+- [ ] Grabar otra sesión del nivel 1 (con la cara) para el modelo combinado con ubicación
+- [ ] *(Anotado por Nico, probando Detectar)* La **O** (nivel 1) cuesta muchísimo y la **T** (nivel 2) también: coincide con los datos (O 55%, se confunde con la D; T 22%, con la K y la I)
 
 **Hecho cuando:** deletreas palabras simples y la app las reconoce en vivo.
 **Aprendes:** inferencia en el dispositivo, rendimiento, UX de resultados con incertidumbre.
