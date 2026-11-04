@@ -49,7 +49,7 @@ pasá su `verified` a `true`:
 - **Dos manos** (nivel 4): Ñ, Q, W, X. Ojo con la **Q** y la **J**: ProyectoTDLSV las clasifica distinto.
 - **Apoyadas en la cara o el cuerpo** (nivel 2): E, Y (ojo); G (oreja); I, T (nariz o boca); S (mentón); F (pecho o cuello). La J (cuello) y la H (frente a la cara) también tienen ubicación, pero van al nivel 3 por el movimiento.
 - **Hacia abajo:** M, N, P.
-- **V:** la CAS muestra dos variantes; elegimos la 1.
+- **V:** la CAS muestra dos variantes, y grabamos las dos (`V1` en el nivel 1, `V2` en el nivel 2, cerca de la cara). Ambas se reconocen como V.
 
 ## Fuentes
 

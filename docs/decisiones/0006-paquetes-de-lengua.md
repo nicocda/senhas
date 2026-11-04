@@ -43,6 +43,11 @@ ml/languages/aed/            ← código ISO 639-3 de la LSA
   `id`, `level`, `hands`, `movement`, `location` (`neutral`, `face`, `body`), `color` y `verified`.
   Los campos guardan los parámetros de la seña que no salen de la forma de la mano (ver
   [los parámetros de una seña](../aprendizaje/parametros-de-la-sena.md)).
+- **Variantes:** cada entrada es una **clase** del modelo. Si una letra tiene variantes (la V tiene
+  dos en la LSA), cada variante es una entrada propia (`V1`, `V2`) con `letter: "V"`. Sin `letter`,
+  la entrada representa la letra de su `id`. El modelo aprende cada forma por separado, y al
+  reconocer se muestra la letra. Así una forma no "contamina" a la otra, y se ve cuál de las dos
+  se confunde.
 - **`verified: false`** hasta que una persona lo confirme contra la referencia de la CAS. La
   clasificación inicial se sacó de la ilustración.
 - **El `manifest.json` lo genera el entrenamiento**, nunca se escribe a mano. La app lo lee para
