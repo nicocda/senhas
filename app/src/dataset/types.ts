@@ -9,6 +9,13 @@ export interface RecordedHand {
   world: number[];
 }
 
+export interface RecordedTake {
+  frames: RecordedFrame[];
+  /** Size of the upright camera image: normalized x and y are relative to it. */
+  imageWidth: number;
+  imageHeight: number;
+}
+
 export interface RecordedFrame {
   /** Milliseconds since the take started. */
   t: number;

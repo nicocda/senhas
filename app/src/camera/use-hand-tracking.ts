@@ -4,7 +4,7 @@ import { useSharedValue } from 'react-native-reanimated';
 import { useFrameOutput } from 'react-native-vision-camera';
 import { createSynchronizable, scheduleOnRN } from 'react-native-worklets';
 
-import type { RecordedFrame, RecordedHand } from '@/dataset/types';
+import type { RecordedFrame, RecordedHand, RecordedTake } from '@/dataset/types';
 
 const STATS_WINDOW_MS = 1000;
 
@@ -64,13 +64,17 @@ export function useHandTracking({ numHands = 1 }: { numHands?: 1 | 2 } = {}) {
     recording.set(true);
   }, [recording]);
 
-  /** Stops recording and returns the frames of the take. */
-  const stopRecording = useCallback((): RecordedFrame[] => {
+  /**
+   * Stops recording and returns the take: its frames, and the size of the upright
+   * image the normalized landmarks refer to (needed to undo the aspect ratio).
+   */
+  const stopRecording = useCallback((): RecordedTake => {
     recording.set(false);
     const frames = take.current?.frames ?? [];
     take.current = null;
-    return frames;
-  }, [recording]);
+    const { width, height } = imageSize.get();
+    return { frames, imageWidth: width, imageHeight: height };
+  }, [recording, imageSize]);
 
   const frameOutput = useFrameOutput({
     // MediaPipe only accepts RGBA, so the camera pipeline converts YUV for us.

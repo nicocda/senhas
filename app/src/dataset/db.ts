@@ -1,14 +1,15 @@
 import { randomUUID } from 'expo-crypto';
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
-import type { RecordedFrame } from './types';
+import type { RecordedTake } from './types';
 
 /**
  * Local dataset: sessions (one person, one sitting) and takes (one letter, one round).
  * Only hand coordinates are stored, never images. Stays in the app's private storage.
  */
 
-const SCHEMA_VERSION = 1;
+/** Migrations run in order from the stored PRAGMA user_version up to this one. */
+const SCHEMA_VERSION = 2;
 
 let database: Promise<SQLiteDatabase> | null = null;
 
@@ -51,6 +52,16 @@ async function open(): Promise<SQLiteDatabase> {
       `);
     });
   }
+  if (version < 2) {
+    // v2: image size per take. NULL in takes recorded before (unknown).
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        ALTER TABLE takes ADD COLUMN image_width INTEGER;
+        ALTER TABLE takes ADD COLUMN image_height INTEGER;
+        PRAGMA user_version = 2;
+      `);
+    });
+  }
   return db;
 }
 
@@ -79,25 +90,27 @@ export async function createSession(input: SessionInput): Promise<string> {
   return id;
 }
 
-export interface TakeInput {
+export interface TakeInput extends RecordedTake {
   sessionId: string;
   entryId: string;
   round: number;
   startedAt: number;
-  frames: RecordedFrame[];
 }
 
 export async function saveTake(input: TakeInput): Promise<string> {
   const db = await getDatabase();
   const id = randomUUID();
   await db.runAsync(
-    `INSERT INTO takes (id, session_id, entry_id, round, started_at, frames) VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO takes (id, session_id, entry_id, round, started_at, frames, image_width, image_height)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     input.sessionId,
     input.entryId,
     input.round,
     input.startedAt,
     JSON.stringify(input.frames),
+    input.imageWidth,
+    input.imageHeight,
   );
   return id;
 }
@@ -124,6 +137,8 @@ export interface TakeRow {
   round: number;
   started_at: number;
   frames: string;
+  image_width: number | null;
+  image_height: number | null;
 }
 
 export async function getSession(sessionId: string): Promise<SessionRow | null> {
@@ -134,7 +149,7 @@ export async function getSession(sessionId: string): Promise<SessionRow | null> 
 export async function getTakes(sessionId: string): Promise<TakeRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<TakeRow>(
-    `SELECT id, entry_id, round, started_at, frames FROM takes
+    `SELECT id, entry_id, round, started_at, frames, image_width, image_height FROM takes
      WHERE session_id = ? AND discarded = 0 ORDER BY started_at`,
     sessionId,
   );

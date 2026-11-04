@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { useHandTracking } from '@/camera/use-hand-tracking';
@@ -8,6 +9,7 @@ import { type CatalogEntry, catalog, entriesForLevel, letterOf } from '@/catalog
 import { Button } from '@/components/button';
 import { createSession, discardTake, saveTake } from '@/dataset/db';
 import { shareSession } from '@/dataset/export';
+import { debugLog } from '@/debug/debug-log';
 
 const ROUNDS = 3;
 const PREPARE_MS = 1500;
@@ -89,68 +91,72 @@ function SetupForm({
       for (let round = 1; round <= ROUNDS; round++) {
         queue.push(...shuffle(entries).map((entry) => ({ entry, round })));
       }
+      debugLog(`Sesión ${sessionId.slice(0, 8)} creada: ${queue.length} tomas`);
       onStart({ sessionId, queue });
     } catch (error) {
       setStarting(false);
+      debugLog(`Error al crear la sesión: ${String(error)}`, 'error');
       Alert.alert('No se pudo crear la sesión', String(error));
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.form}>
-      <Text style={styles.title}>
-        Nivel {level}: {levelName}
-      </Text>
-      <Text style={styles.message}>
-        {entries.length} letras × {ROUNDS} rondas en orden aleatorio, unos{' '}
-        {Math.ceil((entries.length * ROUNDS * (PREPARE_MS + RECORD_MS)) / 60000)} minutos.
-      </Text>
-
-      <Text style={styles.label}>Código de la persona (sin nombre)</Text>
-      <TextInput
-        style={styles.input}
-        value={participant}
-        onChangeText={setParticipant}
-        autoCapitalize="characters"
-        autoCorrect={false}
-      />
-
-      <Text style={styles.label}>Mano dominante</Text>
-      <View style={styles.row}>
-        <View style={styles.flex}>
-          <Choice
-            label="Derecha"
-            selected={dominantHand === 'right'}
-            onPress={() => setDominantHand('right')}
-          />
-        </View>
-        <View style={styles.flex}>
-          <Choice
-            label="Izquierda"
-            selected={dominantHand === 'left'}
-            onPress={() => setDominantHand('left')}
-          />
-        </View>
-      </View>
-
-      <Pressable
-        style={styles.consent}
-        onPress={() => setConsent(!consent)}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: consent }}>
-        <Text style={styles.checkbox}>{consent ? '☑' : '☐'}</Text>
-        <Text style={styles.consentText}>
-          Acepto que se guarden las coordenadas de mi mano (nunca imágenes ni video) en este
-          teléfono, para entrenar un modelo que reconozca la LSA. Puedo pedir que se borren.
+    <SafeAreaView style={styles.fill}>
+      <ScrollView contentContainerStyle={styles.form}>
+        <Text style={styles.title}>
+          Nivel {level}: {levelName}
         </Text>
-      </Pressable>
+        <Text style={styles.message}>
+          {entries.length} letras × {ROUNDS} rondas en orden aleatorio, unos{' '}
+          {Math.ceil((entries.length * ROUNDS * (PREPARE_MS + RECORD_MS)) / 60000)} minutos.
+        </Text>
 
-      <Button
-        label={starting ? 'Preparando…' : 'Empezar'}
-        onPress={start}
-        disabled={!consent || participant.trim() === '' || starting}
-      />
-    </ScrollView>
+        <Text style={styles.label}>Código de la persona (sin nombre)</Text>
+        <TextInput
+          style={styles.input}
+          value={participant}
+          onChangeText={setParticipant}
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
+
+        <Text style={styles.label}>Mano dominante</Text>
+        <View style={styles.row}>
+          <View style={styles.flex}>
+            <Choice
+              label="Derecha"
+              selected={dominantHand === 'right'}
+              onPress={() => setDominantHand('right')}
+            />
+          </View>
+          <View style={styles.flex}>
+            <Choice
+              label="Izquierda"
+              selected={dominantHand === 'left'}
+              onPress={() => setDominantHand('left')}
+            />
+          </View>
+        </View>
+
+        <Pressable
+          style={styles.consent}
+          onPress={() => setConsent(!consent)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consent }}>
+          <Text style={styles.checkbox}>{consent ? '☑' : '☐'}</Text>
+          <Text style={styles.consentText}>
+            Acepto que se guarden las coordenadas de mi mano (nunca imágenes ni video) en este
+            teléfono, para entrenar un modelo que reconozca la LSA. Puedo pedir que se borren.
+          </Text>
+        </Pressable>
+
+        <Button
+          label={starting ? 'Preparando…' : 'Empezar'}
+          onPress={start}
+          disabled={!consent || participant.trim() === '' || starting}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -215,16 +221,21 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
     // was left or the take was repeated in the meantime.
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const frames = stopRecording();
+      const take = stopRecording();
+      const { frames } = take;
       const valid = frames.filter((frame) => frame.hands.length >= current.entry.hands).length;
       try {
         const id = await saveTake({
+          ...take,
           sessionId,
           entryId: current.entry.id,
           round: current.round,
           startedAt: recordStartedAt.current,
-          frames,
         });
+        debugLog(
+          `${current.entry.id} r${current.round}: ${frames.length} cuadros, ${valid} con mano`,
+          valid < frames.length / 2 ? 'warn' : 'info',
+        );
         if (cancelled) {
           return;
         }
@@ -234,6 +245,7 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
           [current.entry.id]: (counts[current.entry.id] ?? 0) + valid,
         }));
       } catch (error) {
+        debugLog(`Error al guardar ${current.entry.id}: ${String(error)}`, 'error');
         Alert.alert('No se pudo guardar la toma', String(error));
       }
       if (cancelled) {
@@ -264,9 +276,11 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
     try {
       await discardTake(id);
     } catch (error) {
+      debugLog(`Error al descartar ${item.entry.id}: ${String(error)}`, 'error');
       Alert.alert('No se pudo descartar la toma', String(error));
       return;
     }
+    debugLog(`${item.entry.id} r${item.round} descartada: se repite`);
     setValidFrames((counts) => ({
       ...counts,
       [item.entry.id]: (counts[item.entry.id] ?? 0) - valid,
@@ -280,8 +294,10 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
   const exportSession = async () => {
     setExporting(true);
     try {
-      await shareSession(sessionId);
+      const uri = await shareSession(sessionId);
+      debugLog(`Exportada: ${uri}`);
     } catch (error) {
+      debugLog(`Error al exportar: ${String(error)}`, 'error');
       Alert.alert('No se pudo exportar', String(error));
     } finally {
       setExporting(false);
@@ -291,30 +307,34 @@ function CaptureRun({ sessionId, initialQueue }: { sessionId: string; initialQue
   if (phase === 'done' || current == null) {
     const entries = [...new Map(queue.map((item) => [item.entry.id, item.entry])).values()];
     return (
-      <ScrollView contentContainerStyle={styles.form}>
-        <Text style={styles.title}>¡Listo!</Text>
-        <Text style={styles.message}>Cuadros con la mano detectada, por letra:</Text>
-        {entries.map((entry) => {
-          const count = validFrames[entry.id] ?? 0;
-          return (
-            <View key={entry.id} style={styles.summaryRow}>
-              <Text style={[styles.summaryLetter, { color: entry.color }]}>{letterOf(entry)}</Text>
-              <Text style={styles.summaryId}>{entry.id !== letterOf(entry) ? entry.id : ''}</Text>
-              <Text style={[styles.summaryCount, count < MIN_VALID_FRAMES && styles.warning]}>
-                {count}
-                {count < MIN_VALID_FRAMES ? '  (pocas)' : ''}
-              </Text>
-            </View>
-          );
-        })}
-        {lastTake != null && <Button label="Repetir la última" onPress={repeatLast} />}
-        <Button
-          label={exporting ? 'Exportando…' : 'Exportar sesión'}
-          onPress={exportSession}
-          disabled={exporting}
-        />
-        <Button label="Volver al menú" onPress={() => router.back()} />
-      </ScrollView>
+      <SafeAreaView style={styles.fill}>
+        <ScrollView contentContainerStyle={styles.form}>
+          <Text style={styles.title}>¡Listo!</Text>
+          <Text style={styles.message}>Cuadros con la mano detectada, por letra:</Text>
+          {entries.map((entry) => {
+            const count = validFrames[entry.id] ?? 0;
+            return (
+              <View key={entry.id} style={styles.summaryRow}>
+                <Text style={[styles.summaryLetter, { color: entry.color }]}>
+                  {letterOf(entry)}
+                </Text>
+                <Text style={styles.summaryId}>{entry.id !== letterOf(entry) ? entry.id : ''}</Text>
+                <Text style={[styles.summaryCount, count < MIN_VALID_FRAMES && styles.warning]}>
+                  {count}
+                  {count < MIN_VALID_FRAMES ? '  (pocas)' : ''}
+                </Text>
+              </View>
+            );
+          })}
+          {lastTake != null && <Button label="Repetir la última" onPress={repeatLast} />}
+          <Button
+            label={exporting ? 'Exportando…' : 'Exportar sesión'}
+            onPress={exportSession}
+            disabled={exporting}
+          />
+          <Button label="Volver al menú" onPress={() => router.back()} />
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 

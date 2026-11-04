@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { toggleDebugMode } from '@/debug/debug-log';
 
 const LEVELS = [1, 2, 3, 4] as const;
 /** Levels 2-4 need the face reference and the glove first (etapas 4.3 y 4.5). */
@@ -16,7 +17,10 @@ export default function MenuScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Señas</Text>
+      {/* Hidden switch: a long press on the title toggles the debug log. */}
+      <Text style={styles.title} onLongPress={toggleDebugMode}>
+        Señas
+      </Text>
 
       <View style={styles.section}>
         <Button label="Detectar" onPress={() => router.push('/detect')} />
