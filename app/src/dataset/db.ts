@@ -121,6 +121,15 @@ export async function discardTake(takeId: string): Promise<void> {
   await db.runAsync('UPDATE takes SET discarded = 1 WHERE id = ?', takeId);
 }
 
+/**
+ * Deletes a session and all its takes (ON DELETE CASCADE). Sessions that aren't
+ * discarded stay in the app's storage until the app is uninstalled.
+ */
+export async function deleteSession(sessionId: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('DELETE FROM sessions WHERE id = ?', sessionId);
+}
+
 export interface SessionRow {
   id: string;
   participant: string;

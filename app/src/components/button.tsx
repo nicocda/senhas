@@ -4,12 +4,14 @@ interface ButtonProps {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** `danger` for actions that delete data. */
+  variant?: 'primary' | 'danger';
 }
 
-export function Button({ label, onPress, disabled = false }: ButtonProps) {
+export function Button({ label, onPress, disabled = false, variant = 'primary' }: ButtonProps) {
   return (
     <Pressable
-      style={[styles.button, disabled && styles.disabled]}
+      style={[styles.button, variant === 'danger' && styles.danger, disabled && styles.disabled]}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -26,6 +28,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 20,
     paddingVertical: 12,
+  },
+  danger: {
+    backgroundColor: '#D92626',
   },
   disabled: {
     backgroundColor: '#9AA5B1',

@@ -15,9 +15,9 @@ import {
 import { Button } from '@/components/button';
 import { randomUUID } from 'expo-crypto';
 
-import { createSession, discardTake, saveTake } from '@/dataset/db';
+import { createSession, deleteSession, discardTake, saveTake } from '@/dataset/db';
 import { normalizeHand, steadyMs } from '@/dataset/features';
-import { shareSession } from '@/dataset/export';
+import { deleteSessionExports, shareSession } from '@/dataset/export';
 import { debugLog } from '@/debug/debug-log';
 
 const ROUNDS = 3;
@@ -422,6 +422,32 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
     setPhase('prepare');
   };
 
+  /** Deletes the whole session from the phone, after confirming. */
+  const discardSession = () => {
+    Alert.alert(
+      'Descartar la sesión',
+      `Se borran del teléfono todas las tomas de ${participant}. No se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Descartar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSession(sessionId);
+              deleteSessionExports(sessionId);
+              debugLog(`Sesión ${sessionId.slice(0, 8)} (${participant}) descartada`);
+              router.back();
+            } catch (error) {
+              debugLog(`Error al descartar la sesión: ${String(error)}`, 'error');
+              Alert.alert('No se pudo descartar la sesión', String(error));
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const exportSession = async () => {
     setExporting(true);
     try {
@@ -478,6 +504,10 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
             disabled={exporting}
           />
           <Button label="Volver al menú" onPress={() => router.back()} />
+          <Text style={styles.hint}>
+            Si no la descartás, la sesión queda guardada en este teléfono.
+          </Text>
+          <Button label="Descartar sesión" onPress={discardSession} variant="danger" />
         </ScrollView>
       </SafeAreaView>
     );
