@@ -212,6 +212,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 #### Etapa 4.6 — Pantalla de captura tipo juego
 
+- [x] **Menú inicial** con la cámara apagada: *Detectar* (la vista en vivo), *Grabar datos* (4 niveles, desactivados hasta esta etapa) y *Ejercicios* (por definir). Al volver al menú, la cámara se cierra y el landmarker se libera
 - [ ] Inicio: consentimiento, identificador sin nombre (`P01`…), mano dominante, elegir niveles (por defecto, todos)
 - [ ] Ciclo por letra: **preparate** (≈1,5 s, letra grande + guante de ejemplo; no se guarda) → **grabando** (≈2 s; ≈3 s para el nivel 3, con cuenta regresiva) → siguiente
 - [ ] **3 rondas** con las letras en orden aleatorio; botón **repetir** si salió mal
