@@ -186,13 +186,23 @@ se confirma en la etapa 4.2):
 
 #### Etapa 4.3 — Qué guarda cada muestra (antes de grabar a nadie)
 
-- [ ] **Decisión:** referencia del cuerpo para las letras de los niveles 2 y 3. Hand Landmarker no ve la cara: sin una referencia (p. ej. unos pocos puntos de Pose Landmarker: nariz, ojos, boca, hombros) E, F, G, I, S, T e Y se confunden con otras. Investigar costo y privacidad; evitar la malla completa de la cara (468 puntos, más identificable). Va en un ADR
+- [ ] **Referencia del cuerpo, activable y desactivable** (como `numHands`): Hand Landmarker no ve la cara, y sin una referencia E, F, G, I, S, T e Y se confunden con otras. Se guardan **puntos mínimos**, nunca la malla de la cara (468 puntos, mucho más identificable). Candidatos, a medir en el teléfono antes de elegir (va en un ADR):
+  - **Face Detector** (BlazeFace): 6 puntos (ojos, punta de la nariz, boca, tragos de las orejas), ~3 ms en CPU en un Pixel 6. Muy barato, pero no ve el pecho ni el cuello (letra F)
+  - **Pose Landmarker** (variante lite): de sus 33 puntos guardamos solo 0–12 (nariz, ojos, orejas, comisuras de la boca, hombros). Cubre pecho y cuello, pero cuesta más
+- [ ] La captura la activa sola en los niveles que la necesitan (2 y 3)
 - [ ] Formato de la sesión con versión de esquema: persona (`P01`…), mano dominante, fecha, y por cada letra y ronda la **secuencia** de cuadros (timestamp, lateralidad, landmarks, worldLandmarks, referencia del cuerpo). Guardar secuencias sirve para todo: de una estática se toman cuadros sueltos; de una dinámica, la secuencia entera
 
 #### Etapa 4.4 — Guardar y exportar en el teléfono
 
-- [ ] **Decisión:** dónde se guarda (archivo por sesión en el almacenamiento privado de la app vs base SQLite) y cómo sale a la PC (compartir con el sistema o `adb pull`). Verificar estado de las librerías (`expo-file-system`, `expo-sqlite`, `expo-sharing`) antes de elegir
+Escenario: varios teléfonos graban en paralelo y después todo se junta en uno principal.
+
+- [ ] **SQLite** (`expo-sqlite`) como almacén en cada teléfono: sesiones, letras, rondas y cuadros; permite contar muestras, filtrar y borrar
+- [ ] **Exportar una sesión** a un archivo (JSON con versión de esquema) y compartirlo con el sistema (`expo-sharing`)
+- [ ] **Importar** archivos de sesión en el teléfono principal (`expo-document-picker`), detectando duplicados
+- [ ] Identificadores que no choquen entre teléfonos: cada sesión con un UUID; el código de persona (`P01`…) puede repetirse en dos teléfonos, así que la importación avisa
+- [ ] Exportar todo a la PC para entrenar (`ml/data/`, fuera de git)
 - [ ] Borrar sesiones desde la app (si alguien retira su consentimiento)
+- [ ] ADR con el esquema y el formato de intercambio
 
 #### Etapa 4.5 — El guante
 
@@ -250,8 +260,8 @@ se confirma en la etapa 4.2):
 | ~~2~~ | ~~Librería para dibujar el esqueleto sobre la cámara~~ → Skia ([ADR 0004](decisiones/0004-plugin-hand-landmarker.md)) | ✅ Hito 3 |
 | 3 | Gestor de entorno Python (`venv` + `pip` o alternativa) | Hito 4 |
 | ~~4~~ | ~~Fuente de datos del alfabeto LSA (propia vs pública)~~ → propia, captura tipo juego ([ADR 0005](decisiones/0005-datos-propios-captura-tipo-juego.md)) | ✅ Hito 4 |
-| 5 | Referencia del cuerpo para letras apoyadas en la cara (Pose Landmarker u otra) | Hito 4, etapa 4.3 |
-| 6 | Almacenamiento en el teléfono (archivos vs SQLite) y exportación | Hito 4, etapa 4.4 |
+| 5 | Referencia del cuerpo, activable: Face Detector (6 puntos) vs Pose Landmarker lite (puntos 0–12). Se mide en el teléfono | Hito 4, etapa 4.3 |
+| ~~6~~ | ~~Almacenamiento en el teléfono~~ → SQLite + exportar/importar sesiones como archivo | ✅ Hito 4, etapa 4.4 |
 
 ---
 
