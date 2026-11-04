@@ -100,6 +100,9 @@ def main() -> None:
     else:
         entries = catalog.level(int(args.level))
         model_name, plan_level = f"level-{args.level}", int(args.level)
+        if any(entry.movement for entry in entries):
+            # This script classifies single frames: a movement letter is a sequence.
+            raise SystemExit(f"Level {args.level} has movement letters: they need a sequence model.")
     labels = [entry.id for entry in entries]
     data_dir = args.data_dir or LANGUAGES_DIR / args.language / "data"
     sessions = load_sessions(data_dir)
