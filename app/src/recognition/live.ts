@@ -6,8 +6,9 @@
  * - otherwise -> the static classifier (levels 1 and 2), smoothed by voting.
  */
 
-import { twoHands } from '@/dataset/features';
 import type { LiveFrame } from '@/camera/use-hand-tracking';
+import { twoHands } from '@/dataset/features';
+import { debugLog } from '@/debug/debug-log';
 
 import type { Classifier } from './classifier';
 import { classifyHand } from './models';
@@ -87,9 +88,18 @@ export class LiveRecognizer {
     }
     this.heldMovement = null;
 
-    if (now - this.lastMovementCheck >= MOVEMENT_CHECK_MS && this.travel() >= MIN_MOVEMENT_TRAVEL) {
+    const travel = this.travel();
+    if (now - this.lastMovementCheck >= MOVEMENT_CHECK_MS && travel >= MIN_MOVEMENT_TRAVEL) {
       this.lastMovementCheck = now;
-      const match = this.movement.recognize(this.recent.map((item) => item.vector));
+      const nearest = this.movement.nearest(this.recent.map((item) => item.vector));
+      const match = nearest != null && nearest.distance <= this.movement.threshold ? nearest : null;
+      // Debug panel: why a movement letter was (or wasn't) recognized.
+      debugLog(
+        nearest == null
+          ? `DTW: pocos cuadros, recorrido ${travel.toFixed(1)}`
+          : `DTW: ${nearest.label} ${nearest.distance.toFixed(2)} (umbral ${this.movement.threshold.toFixed(2)}), recorrido ${travel.toFixed(1)}`,
+        match == null ? 'warn' : 'info',
+      );
       if (match != null) {
         const result: LiveResult = {
           letter: match.letter,

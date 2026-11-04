@@ -137,8 +137,8 @@ export class MovementRecognizer {
     }
   }
 
-  /** Closest template to these frame vectors; null if none is close enough. */
-  recognize(points: number[][]): MovementPrediction | null {
+  /** Closest template to these frame vectors, however far (null: too few frames). */
+  nearest(points: number[][]): MovementPrediction | null {
     const sequence = movementSequence(points, this.model.sequence.length, this.model.sequence.trim);
     if (sequence == null) {
       return null;
@@ -150,6 +150,12 @@ export class MovementRecognizer {
         best = { label: template.label, letter: template.letter, distance };
       }
     }
-    return best != null && best.distance <= this.model.threshold ? best : null;
+    return best;
+  }
+
+  /** Closest template, only if it's close enough (under the model's threshold). */
+  recognize(points: number[][]): MovementPrediction | null {
+    const best = this.nearest(points);
+    return best != null && best.distance <= this.threshold ? best : null;
   }
 }

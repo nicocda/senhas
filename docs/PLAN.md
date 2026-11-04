@@ -234,6 +234,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] **Modelo del nivel 4**: forma de la mano dominante y de la otra (66 + 66) + posición de la otra respecto de la muñeca dominante (4). **100%** dejando afuera una ronda (4 letras muy distintas, una sesión)
 - [x] **Todo integrado en Detectar** ("Todas las letras", `recognition/live.ts`): con dos manos → nivel 4; con una mano que recorrió ≥3 distancias entre ojos en 2,5 s → DTW (si encuentra una plantilla cercana, la muestra 1,5 s); si no → modelo estático. Umbrales elegidos con los datos (velocidad del índice en letras quietas vs en movimiento)
 - [ ] Probar en vivo la integración, sobre todo que las transiciones entre letras estáticas no disparen letras de movimiento
+  - *Primera prueba (Nico, en orden alfabético):* la **H** se reconoció mal y la confianza general bajó respecto de los modelos por nivel (ahora el estático elige entre 21 letras). El modo debug muestra cada intento de DTW (letra más cercana, distancia, umbral y recorrido) para ver por qué falla
 - [x] `pull_sessions.py` lee la base del teléfono: ya no hace falta exportar
 
 #### Etapa 4.7 — Piloto y grabación
