@@ -77,6 +77,12 @@ def main() -> None:
     parser.add_argument("--level", type=int, default=1)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument(
+        "--still",
+        type=float,
+        metavar="THRESHOLD",
+        help="only frames where the hand is still (change per frame below THRESHOLD, e.g. 0.15)",
+    )
     parser.add_argument("--data-dir", type=Path, help="default: languages/<language>/data")
     parser.add_argument("--out-dir", type=Path, help="default: languages/<language>/models/level-<n>")
     args = parser.parse_args()
@@ -86,7 +92,7 @@ def main() -> None:
     labels = [entry.id for entry in entries]
     data_dir = args.data_dir or LANGUAGES_DIR / args.language / "data"
     sessions = load_sessions(data_dir)
-    samples = samples_from_sessions(sessions, entries)
+    samples = samples_from_sessions(sessions, entries, args.still)
     if not samples:
         raise SystemExit(f"No samples for level {args.level} in {data_dir}")
 
@@ -167,7 +173,12 @@ def main() -> None:
         "normalization": {"version": NORMALIZATION_VERSION, "input": "worldLandmarks", "features": FEATURES},
         "model": {"file": "model.tflite", "sha256": hashlib.sha256(tflite).hexdigest(), "bytes": len(tflite)},
         "evaluation": {"strategy": strategy, "accuracy": accuracy, "folds": fold_scores},
-        "data": {"sessions": len(sessions), "people": len(participants), "frames": len(samples)},
+        "data": {
+            "sessions": len(sessions),
+            "people": len(participants),
+            "frames": len(samples),
+            "stillThreshold": args.still,
+        },
         "trainedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

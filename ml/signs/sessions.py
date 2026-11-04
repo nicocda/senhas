@@ -41,8 +41,30 @@ def load_sessions(data_dir: Path) -> list[dict]:
     return sessions
 
 
-def samples_from_sessions(sessions: list[dict], entries: list[Entry]) -> list[Sample]:
-    """Every frame where the expected number of hands was detected becomes a sample."""
+def still_mask(features: list[np.ndarray], threshold: float) -> list[bool]:
+    """True for the frames where the hand is (almost) still.
+
+    The change of a frame is the distance to its neighbours in normalized hand
+    units (1 = wrist -> middle knuckle). A still hand trembles ~0.03-0.1 per frame;
+    a hand changing shape moves 0.3-1. Static letters should only learn the still
+    part: the start of a take is the transition from the previous letter, and a
+    hand that never stops is someone searching for the shape.
+    """
+    if len(features) < 2:
+        return [False] * len(features)
+    steps = [float(np.linalg.norm(features[i] - features[i - 1])) for i in range(1, len(features))]
+    mask = []
+    for i in range(len(features)):
+        around = [steps[j] for j in (i - 1, i) if 0 <= j < len(steps)]
+        mask.append(max(around) < threshold)
+    return mask
+
+
+def samples_from_sessions(
+    sessions: list[dict], entries: list[Entry], still_threshold: float | None = None
+) -> list[Sample]:
+    """Every frame where the expected number of hands was detected becomes a sample.
+    With `still_threshold`, only the frames where the hand is still (see still_mask)."""
     by_id = {entry.id: entry for entry in entries}
     samples = []
     for session in sessions:
@@ -51,21 +73,25 @@ def samples_from_sessions(sessions: list[dict], entries: list[Entry]) -> list[Sa
             entry = by_id.get(take["entryId"])
             if entry is None:
                 continue  # another level
+            features = []
             for frame in take["frames"]:
                 hands = frame["hands"]
                 if len(hands) != entry.hands or entry.hands != 1:
                     continue  # level 1 only for now: exactly one hand
-                features = normalize_hand(hands[0]["world"], info["dominantHand"])
-                if features is None:
-                    continue
-                samples.append(
-                    Sample(
-                        features=features,
-                        entry_id=entry.id,
-                        participant=info["participant"],
-                        session_id=info["id"],
-                        take_id=take["id"],
-                        round=take["round"],
-                    )
+                vector = normalize_hand(hands[0]["world"], info["dominantHand"])
+                if vector is not None:
+                    features.append(vector)
+            keep = still_mask(features, still_threshold) if still_threshold else [True] * len(features)
+            samples.extend(
+                Sample(
+                    features=vector,
+                    entry_id=entry.id,
+                    participant=info["participant"],
+                    session_id=info["id"],
+                    take_id=take["id"],
+                    round=take["round"],
                 )
+                for vector, kept in zip(features, keep)
+                if kept
+            )
     return samples
