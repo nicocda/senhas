@@ -21,6 +21,12 @@ class HybridHandLandmarker(
   // VIDEO mode requires strictly increasing timestamps.
   private var lastTimestampMs = -1L
 
+  // detect() runs on the camera thread and dispose() on the JS thread. Closing
+  // MediaPipe in the middle of an inference frees memory it is still using, so
+  // both take this lock.
+  private val lock = Any()
+  private var isClosed = false
+
   override fun detect(frame: HybridFrameSpec): HandDetection {
     val image =
       (frame as? NativeFrame)?.image
@@ -30,41 +36,52 @@ class HybridHandLandmarker(
       throw Error("HandLandmarker needs a frame output with pixelFormat 'rgb' (got format ${image.format}).")
     }
 
-    val start = System.nanoTime()
-    // toBitmap() copies the pixels, so nothing outlives the frame once detect() returns.
-    val mpImage = BitmapImageBuilder(image.toBitmap()).build()
     val rotationDegrees = image.imageInfo.rotationDegrees
-    val processingOptions = ImageProcessingOptions.builder().setRotationDegrees(rotationDegrees).build()
-    val timestampMs = maxOf(SystemClock.uptimeMillis(), lastTimestampMs + 1).also { lastTimestampMs = it }
-    val converted = System.nanoTime()
-
-    val result =
-      try {
-        landmarker.detectForVideo(mpImage, processingOptions, timestampMs)
-      } finally {
-        mpImage.close()
-      }
-    val inferred = System.nanoTime()
-
-    val hands =
-      result.landmarks().mapIndexed { i, points ->
-        val category = result.handedness()[i].first()
-        DetectedHand(
-          landmarks = points.map { it.toUpright(rotationDegrees) }.toTypedArray(),
-          handedness = if (category.categoryName() == "Left") Handedness.LEFT else Handedness.RIGHT,
-          score = category.score().toDouble(),
-        )
-      }
-
-    // Landmarks are now normalized to the upright image.
+    // Landmarks are returned normalized to the upright image.
     val isSideways = rotationDegrees % 180 != 0
-    return HandDetection(
-      hands = hands.toTypedArray(),
-      imageWidth = (if (isSideways) image.height else image.width).toDouble(),
-      imageHeight = (if (isSideways) image.width else image.height).toDouble(),
-      conversionMs = (converted - start) / 1_000_000.0,
-      inferenceMs = (inferred - converted) / 1_000_000.0,
-    )
+    val imageWidth = (if (isSideways) image.height else image.width).toDouble()
+    val imageHeight = (if (isSideways) image.width else image.height).toDouble()
+
+    synchronized(lock) {
+      if (isClosed) {
+        // A frame already in flight when JS replaces this landmarker (e.g. to
+        // change numHands) gets no hands; the next frame uses the new instance.
+        return HandDetection(emptyArray(), imageWidth, imageHeight, 0.0, 0.0)
+      }
+
+      val start = System.nanoTime()
+      // toBitmap() copies the pixels, so nothing outlives the frame once detect() returns.
+      val mpImage = BitmapImageBuilder(image.toBitmap()).build()
+      val processingOptions = ImageProcessingOptions.builder().setRotationDegrees(rotationDegrees).build()
+      val timestampMs = maxOf(SystemClock.uptimeMillis(), lastTimestampMs + 1).also { lastTimestampMs = it }
+      val converted = System.nanoTime()
+
+      val result =
+        try {
+          landmarker.detectForVideo(mpImage, processingOptions, timestampMs)
+        } finally {
+          mpImage.close()
+        }
+      val inferred = System.nanoTime()
+
+      val hands =
+        result.landmarks().mapIndexed { i, points ->
+          val category = result.handedness()[i].first()
+          DetectedHand(
+            landmarks = points.map { it.toUpright(rotationDegrees) }.toTypedArray(),
+            handedness = if (category.categoryName() == "Left") Handedness.LEFT else Handedness.RIGHT,
+            score = category.score().toDouble(),
+          )
+        }
+
+      return HandDetection(
+        hands = hands.toTypedArray(),
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+        conversionMs = (converted - start) / 1_000_000.0,
+        inferenceMs = (inferred - converted) / 1_000_000.0,
+      )
+    }
   }
 
   /**
@@ -87,7 +104,13 @@ class HybridHandLandmarker(
 
   override fun dispose() {
     super.dispose()
-    landmarker.close()
+    // Waits for an in-flight detect() to finish before freeing MediaPipe.
+    synchronized(lock) {
+      if (!isClosed) {
+        isClosed = true
+        landmarker.close()
+      }
+    }
   }
 
   private fun createLandmarker(options: HandLandmarkerOptions): HandLandmarker {
