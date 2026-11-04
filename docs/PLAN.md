@@ -284,6 +284,19 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 **Hecho cuando:** deletreas palabras simples y la app las reconoce en vivo.
 **Aprendes:** inferencia en el dispositivo, rendimiento, UX de resultados con incertidumbre.
 
+### Hito 7 — Palabras (señas léxicas) cargadas de forma dinámica (idea, sin empezar)
+
+> *Anotado por Nico (2026-11-04):* "con el abecedario solo no hacemos nada": hay que darle valor a las **palabras**, con una forma de ir cargándolas que sea dinámica. Antes de diseñar nada, **Nico va a hablar con una profesora de LSA**.
+
+Ideas para cuando se retome (no son decisiones):
+
+- Una palabra en LSA es una **seña léxica**, no una palabra deletreada: casi todas tienen movimiento, muchas usan las dos manos y la ubicación respecto del cuerpo, y algunas, expresión facial (rasgos no manuales). Se parecen más al nivel 3 que al alfabeto
+- **DTW + plantillas escala bien para "palabras dinámicas"**: sumar una palabra es grabar 3–5 ejemplos, sin reentrenar nada (una red habría que reentrenarla con todas las palabras cada vez)
+- **Catálogo de palabras** en el paquete de lengua (`ml/languages/aed/words.json`), con los mismos parámetros que las letras (manos, movimiento, ubicación, color, guía) y, quizás, categorías o temas para los ejercicios
+- **Cargar palabras desde la app**: definir la palabra, grabar sus ejemplos con la misma captura y que aparezca enseguida en el reconocimiento
+- Las preguntas para la profesora: qué palabras empezar (las más frecuentes o por tema), qué variantes regionales importan, qué rasgos no manuales son imprescindibles, y si puede ser la persona de referencia que graba las guías
+- Fuentes posibles: LSA64 (64 palabras, CC BY-NC-SA 4.0, video con personas: solo local) y el Señario de la CAS (consulta)
+
 ### Hito 6 — Modo aprender y señas dinámicas (futuro)
 
 - Modo juego: la app propone una letra, la haces y te dice si está bien
