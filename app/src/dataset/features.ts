@@ -89,6 +89,82 @@ export function handLocation(
   });
 }
 
+/** Same as other_hand_position / two_hands in ml/signs/features.py. Bump in both. */
+export const TWO_HANDS_VERSION = 1;
+
+interface HandInput {
+  handedness: 'left' | 'right';
+  landmarks: number[];
+  world: number[];
+}
+
+/**
+ * Wrist and index fingertip of the other hand relative to the dominant wrist, in
+ * units of the dominant hand's size (wrist -> middle knuckle), in pixels. Mirrored
+ * on x for left-handed people. Null if degenerate.
+ */
+export function otherHandPosition(
+  dominant: number[],
+  other: number[],
+  imageWidth: number,
+  imageHeight: number,
+  dominantHand: 'left' | 'right',
+): number[] | null {
+  if (imageWidth <= 0 || imageHeight <= 0) {
+    return null;
+  }
+  const px = (values: number[], i: number) => [
+    values[i * 3] * imageWidth,
+    values[i * 3 + 1] * imageHeight,
+  ];
+  const [wx, wy] = px(dominant, 0);
+  const [mx, my] = px(dominant, MIDDLE_MCP);
+  const unit = Math.hypot(mx - wx, my - wy);
+  if (unit < 1) {
+    return null;
+  }
+  const mirror = dominantHand === 'left' ? -1 : 1;
+  return [0, INDEX_TIP].flatMap((point) => {
+    const [x, y] = px(other, point);
+    return [((x - wx) / unit) * mirror, (y - wy) / unit];
+  });
+}
+
+/**
+ * Both hands -> dominant hand shape (66) + other hand shape (66) + other hand
+ * position (4). Which is which comes from MediaPipe's handedness; the other hand is
+ * normalized as the opposite hand, so it also looks like a right hand.
+ */
+export function twoHands(
+  hands: HandInput[],
+  imageWidth: number,
+  imageHeight: number,
+  dominantHand: 'left' | 'right',
+): number[] | null {
+  if (hands.length !== 2) {
+    return null;
+  }
+  const otherSide = dominantHand === 'right' ? 'left' : 'right';
+  const dominant = hands.find((hand) => hand.handedness === dominantHand);
+  const other = hands.find((hand) => hand.handedness === otherSide);
+  if (dominant == null || other == null) {
+    return null;
+  }
+  const shapeA = normalizeHand(dominant.world, dominantHand);
+  const shapeB = normalizeHand(other.world, otherSide);
+  const position = otherHandPosition(
+    dominant.landmarks,
+    other.landmarks,
+    imageWidth,
+    imageHeight,
+    dominantHand,
+  );
+  if (shapeA == null || shapeB == null || position == null) {
+    return null;
+  }
+  return [...shapeA, ...shapeB, ...position];
+}
+
 /**
  * Path length of the index fingertip over a take, in eye distances, from the
  * handLocation of each frame (its last two numbers). How much a movement letter
