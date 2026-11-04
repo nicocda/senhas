@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "language": {
+    "code": "aed",
+    "name": "Lengua de Señas Argentina (LSA)"
+  },
+  "reference": {
+    "name": "Alfabeto Manual Argentino, Confederación Argentina de Sordos (CAS)",
+    "url": "https://cas.org.ar/alfabeto-manual-argentino/",
+    "note": "Todos los derechos reservados: se consulta, no se redistribuye."
+  },
+  "levels": [
+    { "id": 1, "name": "Estáticas de una mano" },
+    { "id": 2, "name": "Apoyadas en la cara o el cuerpo" },
+    { "id": 3, "name": "Con movimiento" },
+    { "id": 4, "name": "Con dos manos" }
+  ],
+  "letters": [
+    { "id": "A", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#D92626", "verified": false },
+    { "id": "B", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#26D95A", "verified": false },
+    { "id": "C", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#8E26D9", "verified": false },
+    { "id": "CH", "level": 3, "hands": 1, "movement": true, "location": "neutral", "color": "#D9C326", "verified": false },
+    { "id": "D", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#26BBD9", "verified": false },
+    { "id": "E", "level": 2, "hands": 1, "movement": false, "location": "face", "color": "#D92687", "verified": false },
+    { "id": "F", "level": 2, "hands": 1, "movement": false, "location": "body", "color": "#53D926", "verified": false },
+    { "id": "G", "level": 2, "hands": 1, "movement": false, "location": "face", "color": "#2E26D9", "verified": false },
+    { "id": "H", "level": 3, "hands": 1, "movement": true, "location": "face", "color": "#D96226", "verified": false },
+    { "id": "I", "level": 2, "hands": 1, "movement": false, "location": "face", "color": "#26D996", "verified": false },
+    { "id": "J", "level": 3, "hands": 1, "movement": true, "location": "body", "color": "#CA26D9", "verified": false },
+    { "id": "K", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#B3D926", "verified": false },
+    { "id": "L", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#267FD9", "verified": false },
+    { "id": "M", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#D9264B", "verified": false, "note": "Apunta hacia abajo" },
+    { "id": "N", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#26D935", "verified": false, "note": "Apunta hacia abajo" },
+    { "id": "Ñ", "level": 4, "hands": 2, "movement": false, "location": "neutral", "color": "#6A26D9", "verified": false },
+    { "id": "O", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#D99E26", "verified": false },
+    { "id": "P", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#26D9D2", "verified": false, "note": "Apunta hacia abajo" },
+    { "id": "Q", "level": 4, "hands": 2, "movement": false, "location": "neutral", "color": "#D926AC", "verified": false, "note": "ProyectoTDLSV la toma como de una mano" },
+    { "id": "R", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#78D926", "verified": false },
+    { "id": "S", "level": 2, "hands": 1, "movement": false, "location": "face", "color": "#2644D9", "verified": false },
+    { "id": "T", "level": 2, "hands": 1, "movement": false, "location": "face", "color": "#D93D26", "verified": false },
+    { "id": "U", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#26D971", "verified": false },
+    { "id": "V", "level": 1, "hands": 1, "movement": false, "location": "neutral", "color": "#A526D9", "verified": false, "note": "La CAS muestra dos variantes regionales; grabamos la variante 1" },
+    { "id": "W", "level": 4, "hands": 2, "movement": false, "location": "neutral", "color": "#D8D926", "verified": false },
+    { "id": "X", "level": 4, "hands": 2, "movement": false, "location": "neutral", "color": "#26A4D9", "verified": false },
+    { "id": "Y", "level": 2, "hands": 1, "movement": false, "location": "face", "color": "#D92670", "verified": false },
+    { "id": "Z", "level": 3, "hands": 1, "movement": true, "location": "neutral", "color": "#3CD926", "verified": false }
+  ]
+}
