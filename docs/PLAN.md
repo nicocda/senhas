@@ -234,6 +234,11 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] **Modelo del nivel 4**: forma de la mano dominante y de la otra (66 + 66) + posición de la otra respecto de la muñeca dominante (4). **100%** dejando afuera una ronda (4 letras muy distintas, una sesión)
 - [x] **Todo integrado en Detectar** ("Todas las letras", `recognition/live.ts`): con dos manos → nivel 4; con una mano que recorrió ≥3 distancias entre ojos en 2,5 s → DTW (si encuentra una plantilla cercana, la muestra 1,5 s); si no → modelo estático. Umbrales elegidos con los datos (velocidad del índice en letras quietas vs en movimiento)
 - [ ] Probar en vivo la integración, sobre todo que las transiciones entre letras estáticas no disparen letras de movimiento
+  - *Segunda prueba (Nico): "lento pero aceptable".* Problemas para mejorar:
+    - **Cada cambio de letra se interpreta como una de movimiento** (casi siempre Z o CH): la transición entre letras estáticas también recorre distancia y DTW la acepta. Ideas: exigir que el movimiento empiece y termine con la mano quieta; pedir que la plantilla más cercana gane con margen sobre la segunda; grabar transiciones como clase "ninguna"; subir el recorrido mínimo o bajar el umbral
+    - **La CH molesta mucho** (aparece en las transiciones). Nico propone sacarla: no es una letra del alfabeto español actual, aunque la lámina de la CAS sí la incluye. Decidirlo al retomar
+    - **La W siempre sale como X** en vivo, aunque el modelo del nivel 4 dio 100% con los datos grabados. Revisar qué cambia en vivo (lateralidad de cada mano, cuál se toma como dominante, encuadre)
+    - **La T se confunde muchísimo con la I** (ya se veía en los datos: forma de mano parecida; la ubicación ayudaría)
   - *Primera prueba (Nico, en orden alfabético):* la **H** se reconoció mal y la confianza general bajó respecto de los modelos por nivel (ahora el estático elige entre 21 letras). El modo debug muestra cada intento de DTW (letra más cercana, distancia, umbral y recorrido) para ver por qué falla
 - [x] `pull_sessions.py` lee la base del teléfono: ya no hace falta exportar
 
