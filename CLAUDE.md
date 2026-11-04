@@ -21,6 +21,7 @@
 ## Comandos (desde `app/`)
 - `npm run check`: typecheck + lint + format:check. Tiene que pasar antes de cada commit.
 - `npm run android`: compila e instala en el emulador o dispositivo.
+- `npm run release:phone`: versión que funciona sola, sin cable ni Metro (ADR 0011), solo para arm64 y la instala en el teléfono por USB. Lleva adentro los modelos: recompilarla después de reentrenar. Respaldar antes con `pull_sessions.py`. Ojo con el disco: los intermedios nativos de una release ocupan varios GB.
 - `npm run phone`: si la app del teléfono queda en "iniciando". Restablece el túnel USB (`adb reverse tcp:8081`), que se pierde cada vez que se corta la conexión, y abre la app apuntando a Metro.
 - Si Metro no encuentra un archivo nuevo ("Unable to resolve"), reiniciarlo con `npx expo start --dev-client --clear`.
 
