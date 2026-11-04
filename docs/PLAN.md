@@ -156,6 +156,7 @@ y CNG (*Continuous Native Generation*), estructura de un proyecto, Expo Router.
 
 ### Hito 4 — Datos y entrenamiento (Python)
 
+- [x] Detectar y dibujar **las dos manos** (algunas señas LSA son bimanuales): `numHands: 2` y overlay por bloques de 21 puntos. Costo en el emulador: 4–6 FPS y MediaPipe 112–145 ms con dos manos, contra ~12 FPS y ~60 ms con una. En modo VIDEO, MediaPipe solo se saltea la detección de palmas si ya sigue `numHands` manos ([hand_landmarker_graph.cc](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/tasks/cc/vision/hand_landmarker/hand_landmarker_graph.cc)). *Pendiente:* medir en el teléfono
 - [ ] Ejercicio práctico JS ↔ nativo: cambiar un spec sin nitrogen ni recompilar, ver el error, y después hacerlo bien
 - [ ] Estructura de **paquetes de lengua** pensada para sumar otras lenguas de señas: `ml/languages/aed/` (ISO 639-3 de la LSA) con el catálogo de señas y los datos; el entrenamiento **genera** el `manifest.json` (labels en orden, hash del modelo, versión de normalización) junto al `.tflite`. Va en un ADR
 - [ ] Investigar si existen datasets públicos del alfabeto LSA (y sus licencias)

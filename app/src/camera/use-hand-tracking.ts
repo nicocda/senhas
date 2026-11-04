@@ -25,7 +25,10 @@ export function useHandTracking() {
   const landmarker = useMemo(() => createHandLandmarker(), []);
   useEffect(() => () => landmarker.dispose(), [landmarker]);
 
-  /** Flat [x0, y0, x1, y1, ...] of the first hand, normalized to the upright image. Empty: no hand. */
+  /**
+   * Flat [x0, y0, x1, y1, ...] of every detected hand, 21 points each, normalized
+   * to the upright image. Empty: no hand.
+   */
   const landmarks = useSharedValue<number[]>([]);
   const imageSize = useSharedValue({ width: 0, height: 0 });
   const [stats, setStats] = useState<TrackingStats>({ fps: 0, conversionMs: 0, inferenceMs: 0 });
@@ -44,8 +47,9 @@ export function useHandTracking() {
       'worklet';
       try {
         const detection = landmarker.detect(frame);
-        const hand = detection.hands[0];
-        landmarks.value = hand ? hand.landmarks.flatMap((point) => [point.x, point.y]) : [];
+        landmarks.value = detection.hands.flatMap((hand) =>
+          hand.landmarks.flatMap((point) => [point.x, point.y]),
+        );
         if (
           imageSize.value.width !== detection.imageWidth ||
           imageSize.value.height !== detection.imageHeight
