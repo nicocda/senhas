@@ -26,7 +26,10 @@
 
 ## Comandos (desde `ml/`, con `.venv\Scripts\python`)
 - `pull_sessions.py`: copia por USB las sesiones exportadas de los teléfonos a `languages/aed/data/`.
-- `train.py --level 1`: entrena, evalúa (una persona o ronda afuera), exporta `.tflite` + `manifest.json`.
+- `train.py --level 1|2|4|static`: entrena, evalúa (una persona o ronda afuera), exporta `.tflite`, `model.json` (lo usa la app) y `manifest.json`.
+- `train_sequences.py`: plantillas DTW de las letras con movimiento (nivel 3).
+- `build_references.py`: poses guía de cada letra para la captura.
+- La app importa `models/*/model.json`, `models/movement/model.json` y `models/references.json`: correr los tres scripts antes de compilar en una máquina nueva.
 - Datos de personas, modelos y corridas están fuera de git (`ml/.gitignore`).
 
 ## Reglas

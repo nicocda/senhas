@@ -208,8 +208,9 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 #### Etapa 4.5 — El guante
 
-- [ ] Componente Skia que dibuja la mano como un **guante** relleno (dedos redondeados + palma) a partir de los 21 puntos, con el **color de la letra**
-- [ ] Grabar la **referencia**: vos hacés cada letra (bien aprendida del video de la CAS) y esos puntos alimentan el guante de ejemplo. Así no usamos imágenes ajenas (la lámina de la CAS tiene todos los derechos reservados)
+- [x] Componente Skia `GuideHand`: la mano como **guante** (palma rellena, dedos con trazo grueso y redondeado, contorno oscuro) con el **color de la letra**, espejado como la cámara; la cara esquemática (ojos, nariz, boca) para ver dónde va la mano; dos manos en el nivel 4; **animado** en las letras con movimiento, con el rastro del índice
+- [x] **Referencias desde las sesiones de Nico** (`ml/build_references.py` → `models/references.json`, fuera de git): por letra, la toma más firme y su cuadro más típico; en las de movimiento, la toma más completa, recortada y submuestreada. Las 29 clases. No se usa la lámina de la CAS (todos los derechos reservados): Nico propuso usarla o generar dibujos nuevos a partir de ella, y se eligió dibujar desde datos propios
+- [x] La captura muestra la guía al lado de la letra, mientras se prepara y mientras graba
 
 #### Etapa 4.6 — Pantalla de captura tipo juego
 
