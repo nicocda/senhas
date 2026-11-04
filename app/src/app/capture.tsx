@@ -5,11 +5,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { useHandTracking } from '@/camera/use-hand-tracking';
-import { type CatalogEntry, catalog, entriesForLevel, letterOf } from '@/catalog/catalog';
+import {
+  type CatalogEntry,
+  catalog,
+  entriesForLevel,
+  extraRounds,
+  letterOf,
+} from '@/catalog/catalog';
 import { Button } from '@/components/button';
 import { randomUUID } from 'expo-crypto';
 
 import { createSession, discardTake, saveTake } from '@/dataset/db';
+import { normalizeHand, steadyMs } from '@/dataset/features';
 import { shareSession } from '@/dataset/export';
 import { debugLog } from '@/debug/debug-log';
 
@@ -22,6 +29,13 @@ const MIN_VALID_FRAMES = 20;
 /** A take with fewer frames with the hand than this is not saved: the letter is repeated. */
 const MIN_TAKE_VALID_FRAMES = 3;
 const MIN_TAKE_VALID_RATIO = 0.3;
+/**
+ * A take is steady if the hand held the letter's shape at least this long (or a
+ * third of the take, if shorter). Otherwise the letter is repeated, up to
+ * MAX_ATTEMPTS times: easy letters pass at once, hard ones get more takes.
+ */
+const MIN_STEADY_MS = 1000;
+const MAX_ATTEMPTS = 3;
 
 interface QueueItem {
   entry: CatalogEntry;
@@ -31,6 +45,7 @@ interface QueueItem {
 interface SessionSetup {
   sessionId: string;
   participant: string;
+  dominantHand: 'left' | 'right';
   queue: QueueItem[];
   recordMs: number;
 }
@@ -96,6 +111,9 @@ function SetupForm({
   const [starting, setStarting] = useState(false);
   const levelName = catalog.levels.find((l) => l.id === level)?.name ?? '';
   const seconds = parseSeconds(secondsText);
+  const roundsOf = (entry: CatalogEntry) => ROUNDS + extraRounds(entry);
+  const totalTakes = entries.reduce((sum, entry) => sum + roundsOf(entry), 0);
+  const harder = entries.filter((entry) => extraRounds(entry) > 0);
 
   const start = async () => {
     if (seconds == null) {
@@ -110,14 +128,18 @@ function SetupForm({
         catalogSchema: catalog.schemaVersion,
         consentAt: Date.now(),
       });
+      // Round by round in random order; letters with extra rounds keep appearing
+      // after the others are done.
       const queue: QueueItem[] = [];
-      for (let round = 1; round <= ROUNDS; round++) {
-        queue.push(...shuffle(entries).map((entry) => ({ entry, round })));
+      const maxRounds = Math.max(...entries.map(roundsOf));
+      for (let round = 1; round <= maxRounds; round++) {
+        const inRound = entries.filter((entry) => roundsOf(entry) >= round);
+        queue.push(...shuffle(inRound).map((entry) => ({ entry, round })));
       }
       debugLog(
         `Sesión ${sessionId.slice(0, 8)} (${participant}) creada: ${queue.length} tomas de ${seconds} s`,
       );
-      onStart({ sessionId, participant, queue, recordMs: seconds * 1000 });
+      onStart({ sessionId, participant, dominantHand, queue, recordMs: seconds * 1000 });
     } catch (error) {
       setStarting(false);
       debugLog(`Error al crear la sesión: ${String(error)}`, 'error');
@@ -132,11 +154,17 @@ function SetupForm({
           Nivel {level}: {levelName}
         </Text>
         <Text style={styles.message}>
-          {entries.length} letras × {ROUNDS} rondas en orden aleatorio
+          {entries.length} letras × {ROUNDS} rondas en orden aleatorio ({totalTakes} tomas)
           {seconds != null &&
-            `, unos ${Math.ceil((entries.length * ROUNDS * (PREPARE_MS + seconds * 1000)) / 60000)} minutos`}
+            `, unos ${Math.ceil((totalTakes * (PREPARE_MS + seconds * 1000)) / 60000)} minutos`}
           .
         </Text>
+        {harder.length > 0 && (
+          <Text style={styles.hint}>
+            Más rondas para las letras que el último modelo reconoce peor:{' '}
+            {harder.map((entry) => `${entry.id} +${extraRounds(entry)}`).join(', ')}.
+          </Text>
+        )}
 
         <Text style={styles.label}>Código asignado</Text>
         <Text style={styles.code}>{participant}</Text>
@@ -226,13 +254,17 @@ interface LastTake {
 }
 
 function CaptureRun({ setup }: { setup: SessionSetup }) {
-  const { sessionId, participant, recordMs } = setup;
+  const { sessionId, participant, dominantHand, recordMs } = setup;
   const router = useRouter();
   const [queue, setQueue] = useState(setup.queue);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('prepare');
-  /** Shown while preparing the same letter again because the hand wasn't seen. */
-  const [retry, setRetry] = useState(false);
+  /** Attempt number for the current letter (0 = first). */
+  const [attempt, setAttempt] = useState(0);
+  /** Why the same letter is being prepared again, if it is. */
+  const [retry, setRetry] = useState<'none' | 'noHand' | 'unsteady'>('none');
+  /** Takes per letter where the hand didn't hold the shape: how much each letter costs. */
+  const [unsteady, setUnsteady] = useState<Record<string, number>>({});
   const [lastTake, setLastTake] = useState<LastTake | null>(null);
   const [validFrames, setValidFrames] = useState<Record<string, number>>({});
   const [exporting, setExporting] = useState(false);
@@ -271,13 +303,30 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
           'warn',
         );
         if (!cancelled) {
-          setRetry(true);
+          setRetry('noHand');
           setPhase('prepare');
         }
         return;
       }
 
+      // Did the hand hold the letter? Two-handed letters are measured later (level 4).
+      const steady =
+        current.entry.hands === 1
+          ? steadyMs(
+              frames.flatMap((frame) => {
+                const features =
+                  frame.hands.length === 1
+                    ? normalizeHand(frame.hands[0].world, dominantHand)
+                    : null;
+                return features == null ? [] : [{ t: frame.t, features }];
+              }),
+            )
+          : Infinity;
+      const isSteady = steady >= Math.min(MIN_STEADY_MS, recordMs / 3);
+
       try {
+        // Saved even if not steady: it shows how the letter was searched for, and
+        // training keeps only the still frames (train.py --still).
         const id = await saveTake({
           ...take,
           sessionId,
@@ -286,12 +335,12 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
           startedAt: recordStartedAt.current,
         });
         debugLog(
-          `${current.entry.id} r${current.round}: ${valid}/${frames.length} cuadros con mano`,
+          `${current.entry.id} r${current.round} intento ${attempt + 1}: ${valid}/${frames.length} con mano, ${Math.round(steady)} ms firme`,
+          isSteady ? 'info' : 'warn',
         );
         if (cancelled) {
           return;
         }
-        setRetry(false);
         setLastTake({ id, item: current, validFrames: valid });
         setValidFrames((counts) => ({
           ...counts,
@@ -304,6 +353,22 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
       if (cancelled) {
         return;
       }
+
+      if (!isSteady) {
+        setUnsteady((counts) => ({
+          ...counts,
+          [current.entry.id]: (counts[current.entry.id] ?? 0) + 1,
+        }));
+        // Same letter again, up to MAX_ATTEMPTS; then move on (the summary flags it).
+        if (attempt + 1 < MAX_ATTEMPTS) {
+          setAttempt(attempt + 1);
+          setRetry('unsteady');
+          setPhase('prepare');
+          return;
+        }
+      }
+      setAttempt(0);
+      setRetry('none');
       if (index + 1 < queue.length) {
         setIndex(index + 1);
         setPhase('prepare');
@@ -317,7 +382,18 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
       // Leaving mid-take (repeat, back button): the frames are dropped.
       stopRecording();
     };
-  }, [phase, index, current, queue, sessionId, recordMs, startRecording, stopRecording]);
+  }, [
+    phase,
+    index,
+    attempt,
+    current,
+    queue,
+    sessionId,
+    dominantHand,
+    recordMs,
+    startRecording,
+    stopRecording,
+  ]);
 
   /** Discards the previous take and puts its letter next in line. */
   const repeatLast = async () => {
@@ -341,6 +417,8 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
     const insertAt = phase === 'done' ? queue.length : index;
     setQueue([...queue.slice(0, insertAt), item, ...queue.slice(insertAt)]);
     setIndex(insertAt);
+    setAttempt(0);
+    setRetry('none');
     setPhase('prepare');
   };
 
@@ -366,22 +444,33 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
           <Text style={styles.message}>
             Código de esta sesión: <Text style={styles.codeInline}>{participant}</Text>
           </Text>
-          <Text style={styles.message}>Cuadros con la mano detectada, por letra:</Text>
-          {entries.map((entry) => {
-            const count = validFrames[entry.id] ?? 0;
-            return (
-              <View key={entry.id} style={styles.summaryRow}>
-                <Text style={[styles.summaryLetter, { color: entry.color }]}>
-                  {letterOf(entry)}
-                </Text>
-                <Text style={styles.summaryId}>{entry.id !== letterOf(entry) ? entry.id : ''}</Text>
-                <Text style={[styles.summaryCount, count < MIN_VALID_FRAMES && styles.warning]}>
-                  {count}
-                  {count < MIN_VALID_FRAMES ? '  (pocas)' : ''}
-                </Text>
-              </View>
-            );
-          })}
+          <Text style={styles.message}>
+            Por letra: cuadros con la mano detectada y tomas en las que la mano no se quedó quieta.
+          </Text>
+          {/* Letters that needed the most repeats first: those are the ones to practice. */}
+          {[...entries]
+            .sort((a, b) => (unsteady[b.id] ?? 0) - (unsteady[a.id] ?? 0))
+            .map((entry) => {
+              const count = validFrames[entry.id] ?? 0;
+              const repeats = unsteady[entry.id] ?? 0;
+              return (
+                <View key={entry.id} style={styles.summaryRow}>
+                  <Text style={[styles.summaryLetter, { color: entry.color }]}>
+                    {letterOf(entry)}
+                  </Text>
+                  <Text style={styles.summaryId}>
+                    {entry.id !== letterOf(entry) ? entry.id : ''}
+                  </Text>
+                  <Text style={[styles.summaryCount, count < MIN_VALID_FRAMES && styles.warning]}>
+                    {count}
+                    {count < MIN_VALID_FRAMES ? ' (pocas)' : ''}
+                  </Text>
+                  <Text style={[styles.summaryCount, repeats > 0 && styles.warning]}>
+                    {repeats > 0 ? `${repeats} sin firmeza` : 'firme'}
+                  </Text>
+                </View>
+              );
+            })}
           {lastTake != null && <Button label="Repetir la última" onPress={repeatLast} />}
           <Button
             label={exporting ? 'Exportando…' : 'Exportar sesión'}
@@ -400,7 +489,7 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
       <HandCamera frameOutput={frameOutput} landmarks={landmarks} imageSize={imageSize} />
       <View style={styles.topBar}>
         <Text style={styles.progress}>
-          Ronda {current.round}/{ROUNDS} · {index + 1}/{queue.length}
+          Ronda {current.round}/{ROUNDS + extraRounds(current.entry)} · {index + 1}/{queue.length}
         </Text>
         <View style={[styles.letterBadge, { backgroundColor: current.entry.color }]}>
           <Text style={styles.letter}>{letterOf(current.entry)}</Text>
@@ -409,7 +498,13 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
           <Text style={styles.variant}>Variante {current.entry.id}</Text>
         )}
         <Text style={[styles.status, recording && styles.statusRecording]}>
-          {recording ? '● Grabando' : retry ? 'No vi tu mano: repetimos' : 'Preparate…'}
+          {recording
+            ? '● Grabando'
+            : retry === 'noHand'
+              ? 'No vi tu mano: repetimos'
+              : retry === 'unsteady'
+                ? `Mantené la letra quieta (intento ${attempt + 1}/${MAX_ATTEMPTS})`
+                : 'Preparate…'}
         </Text>
       </View>
       {lastTake != null && (
