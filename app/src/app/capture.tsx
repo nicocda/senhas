@@ -313,20 +313,22 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
         return;
       }
 
-      // Did the hand hold the letter? Not for movement letters (moving *is* the letter),
-      // nor two-handed ones yet (level 4).
-      const steady =
-        current.entry.hands === 1 && !current.entry.movement
-          ? steadyMs(
-              frames.flatMap((frame) => {
-                const features =
-                  frame.hands.length === 1
-                    ? normalizeHand(frame.hands[0].world, dominantHand)
-                    : null;
-                return features == null ? [] : [{ t: frame.t, features }];
-              }),
-            )
-          : Infinity;
+      // Did the hand hold the letter? Not for movement letters (moving *is* the letter).
+      // Two-handed letters: measured on the dominant hand (MediaPipe's handedness).
+      const steady = current.entry.movement
+        ? Infinity
+        : steadyMs(
+            frames.flatMap((frame) => {
+              const hand =
+                frame.hands.length !== current.entry.hands
+                  ? undefined
+                  : current.entry.hands === 1
+                    ? frame.hands[0]
+                    : frame.hands.find((candidate) => candidate.handedness === dominantHand);
+              const features = hand == null ? null : normalizeHand(hand.world, dominantHand);
+              return features == null ? [] : [{ t: frame.t, features }];
+            }),
+          );
       const isSteady = steady >= Math.min(MIN_STEADY_MS, recordMs / 3);
       // Movement letters: how far the index fingertip traveled, in eye distances. Only
       // logged for now, to learn what a normal movement looks like (no repeat rule yet).
