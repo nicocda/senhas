@@ -1,20 +1,28 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { type LiveFrame, useHandTracking } from '@/camera/use-hand-tracking';
 import { catalog } from '@/catalog/catalog';
 import { Button } from '@/components/button';
-import { classifierFor, classifyHand, type RecognitionMode } from '@/recognition/models';
-import { PredictionSmoother, type SmoothedPrediction } from '@/recognition/smoothing';
+import { LiveRecognizer, type LiveResult } from '@/recognition/live';
+import { classifierFor, classifyHand, movementRecognizerFor } from '@/recognition/models';
+import { PredictionSmoother } from '@/recognition/smoothing';
 
 const colorOf = new Map(catalog.letters.map((entry) => [entry.id, entry.color]));
 
-const MODES: RecognitionMode[] = ['all', 1, 2];
-const MODE_LABELS: Record<RecognitionMode, string> = {
+/** `all`: every letter, choosing the model per frame (LiveRecognizer). */
+type Mode = 'all' | 1 | 2;
+const MODES: Mode[] = ['all', 1, 2];
+const MODE_LABELS: Record<Mode, string> = {
   all: 'Todas las letras',
-  1: 'Letras nivel 1',
-  2: 'Letras nivel 2',
+  1: 'Solo nivel 1',
+  2: 'Solo nivel 2',
+};
+const KIND_LABELS: Record<LiveResult['kind'], string> = {
+  static: '',
+  movement: 'movimiento',
+  twoHands: 'dos manos',
 };
 
 export default function DetectScreen() {
@@ -25,52 +33,77 @@ export default function DetectScreen() {
   );
 }
 
-function LiveDetection() {
-  // One hand by default: two cost almost twice as much. A sign could switch this later.
-  const [numHands, setNumHands] = useState<1 | 2>(1);
-  // Which letters to recognize: all of them by default. A model that uses the
-  // hand's location turns the face reference on.
-  const [mode, setMode] = useState<RecognitionMode>('all');
-  const [prediction, setPrediction] = useState<SmoothedPrediction | null>(null);
-  const [hasHand, setHasHand] = useState(false);
+/** Same interface for the integrated recognizer and the single-level classifiers. */
+interface Recognizer {
+  push(frame: LiveFrame, now: number): LiveResult | null;
+  /** Needs two hands tracked (level 4 letters). */
+  twoHands: boolean;
+  /** Needs the face (location relative to the eyes). */
+  face: boolean;
+}
 
-  const classifier = useMemo(() => classifierFor(mode), [mode]);
-  const smoother = useRef(new PredictionSmoother());
-
-  const onLiveFrame = useCallback(
-    (frame: LiveFrame) => {
+function singleLevel(level: 1 | 2): Recognizer {
+  const classifier = classifierFor(level);
+  const smoother = new PredictionSmoother();
+  return {
+    twoHands: false,
+    face: classifier.usesLocation,
+    push(frame) {
       const hand = frame.hands.length === 1 ? frame.hands[0] : null;
       const result =
         hand == null
           ? null
           : classifyHand(classifier, hand, frame.body, frame.imageWidth, frame.imageHeight);
-      setHasHand(hand != null);
       if (result == null) {
-        smoother.current.reset();
-        setPrediction(null);
-        return;
+        smoother.reset();
+        return null;
       }
-      const smoothed = smoother.current.push(result);
+      const smoothed = smoother.push(result);
+      return smoothed && { ...smoothed, kind: 'static' };
+    },
+  };
+}
+
+function allLetters(): Recognizer {
+  const recognizer = new LiveRecognizer(
+    classifierFor('static'),
+    classifierFor(4),
+    movementRecognizerFor(),
+  );
+  return { twoHands: true, face: true, push: (frame, now) => recognizer.push(frame, now) };
+}
+
+function LiveDetection() {
+  const [mode, setMode] = useState<Mode>('all');
+  const [prediction, setPrediction] = useState<LiveResult | null>(null);
+  const [hasHand, setHasHand] = useState(false);
+
+  // A fresh recognizer per mode: no state carried over between modes.
+  const recognizer = useMemo(() => (mode === 'all' ? allLetters() : singleLevel(mode)), [mode]);
+
+  const onLiveFrame = useCallback(
+    (frame: LiveFrame) => {
+      const result = recognizer.push(frame, Date.now());
+      setHasHand(frame.hands.length > 0);
       // Re-render only when what's shown changes (letter, or confidence by 5%).
       setPrediction((previous) =>
-        previous?.label === smoothed?.label &&
-        Math.round((previous?.confidence ?? 0) * 20) ===
-          Math.round((smoothed?.confidence ?? 0) * 20)
+        previous?.label === result?.label &&
+        Math.round((previous?.confidence ?? 0) * 20) === Math.round((result?.confidence ?? 0) * 20)
           ? previous
-          : smoothed,
+          : result,
       );
     },
-    [classifier],
+    [recognizer],
   );
 
   const { frameOutput, landmarks, body, imageSize, stats } = useHandTracking({
-    numHands,
-    bodyReference: classifier.usesLocation ? 'face' : 'none',
+    // Two hands only when level 4 letters are possible: it costs frames per second.
+    numHands: recognizer.twoHands ? 2 : 1,
+    bodyReference: recognizer.face ? 'face' : 'none',
     onLiveFrame,
   });
 
   const nextMode = () => {
-    smoother.current.reset();
     setPrediction(null);
     setMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length]);
   };
@@ -85,7 +118,7 @@ function LiveDetection() {
       />
       <Text style={styles.stats}>
         {stats.fps} FPS · manos {stats.inferenceMs} ms
-        {classifier.usesLocation && ` · cara ${stats.bodyMs} ms`}
+        {recognizer.face && ` · cara ${stats.bodyMs} ms`}
       </Text>
       <View style={styles.result}>
         {prediction != null ? (
@@ -97,17 +130,16 @@ function LiveDetection() {
               ]}>
               <Text style={styles.letter}>{prediction.letter}</Text>
             </View>
-            <Text style={styles.confidence}>{Math.round(prediction.confidence * 100)}%</Text>
+            <Text style={styles.confidence}>
+              {Math.round(prediction.confidence * 100)}%
+              {KIND_LABELS[prediction.kind] !== '' && ` · ${KIND_LABELS[prediction.kind]}`}
+            </Text>
           </>
         ) : (
           <Text style={styles.hint}>{hasHand ? '¿…?' : 'Mostrá una letra'}</Text>
         )}
       </View>
       <View style={styles.bottomBar}>
-        <Button
-          label={numHands === 1 ? '1 mano' : '2 manos'}
-          onPress={() => setNumHands(numHands === 1 ? 2 : 1)}
-        />
         <Button label={MODE_LABELS[mode]} onPress={nextMode} />
       </View>
     </View>

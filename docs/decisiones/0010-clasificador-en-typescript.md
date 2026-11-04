@@ -42,6 +42,13 @@ cara" significa ciertas letras. Por eso la captura ahora enciende la cara en tod
 Al evaluar, se deja afuera una persona por vez solo si cada persona tiene todas las letras; si no,
 una ronda.
 
+**Todas las letras (2026-11-04):** `recognition/live.ts` elige el modelo en cada cuadro: con dos manos,
+el clasificador del nivel 4 (forma de ambas manos + posición relativa); con una mano que se movió
+lo suficiente, DTW contra las plantillas del nivel 3 (`recognition/sequences.ts`, también en
+TypeScript); si no, el modelo estático. DTW con 24 plantillas de 32 cuadros se corre unas 3 veces
+por segundo. Paridad verificada: las características de dos manos coinciden en 515/515 cuadros y
+DTW elige la misma plantilla en 12/12 tomas (diferencia de distancia 4e-7).
+
 ## Verificación
 
 - La salida de TypeScript coincide con la del `.tflite`: la misma letra en **2578/2578** cuadros

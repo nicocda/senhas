@@ -25,6 +25,8 @@ export interface ModelFile {
   normalization: {
     version: number;
     location: { version: number; relativeTo: string } | null;
+    /** Two-handed models (level 4): both hands' shapes + their relative position. */
+    twoHands?: { version: number } | null;
     features: number;
   };
   layers: DenseLayer[];
