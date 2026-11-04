@@ -175,8 +175,8 @@ se confirma en la etapa 4.2):
 
 #### Etapa 4.1 — Cerrar el puente JS ↔ nativo
 
-- [ ] Ejercicio práctico: cambiar un spec sin nitrogen ni recompilar (`worldLandmarks`), ver el error, y después hacerlo bien
-- [ ] `worldLandmarks` (puntos en metros, centrados en la mano) disponibles en JS: los vamos a guardar en cada muestra
+- [x] Ejercicio práctico: cambiar un spec sin nitrogen ni recompilar (`worldLandmarks`). Sin nitrogen, el `DetectedHand` generado no tiene el campo: TypeScript compila, pero en runtime llega `undefined`. Solución: `npx nitrogen`, llenarlo en Kotlin y recompilar
+- [x] `worldLandmarks` (puntos en metros, centrados en la mano) disponibles en JS, en orientación vertical igual que los normalizados (MediaPipe los rota con el mismo `hand_rect`: [world_landmark_projection_calculator.cc](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/calculators/util/world_landmark_projection_calculator.cc)). Verificado en el emulador con imagen girada (720×1280): la dirección muñeca→nudillo medio coincide en ambos (coseno 0,96–1,00)
 
 #### Etapa 4.2 — Estudiar el alfabeto y armar el catálogo
 

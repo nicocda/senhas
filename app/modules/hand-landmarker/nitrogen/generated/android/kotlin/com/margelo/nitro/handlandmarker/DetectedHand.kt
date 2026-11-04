@@ -23,6 +23,9 @@ data class DetectedHand(
   val landmarks: Array<Landmark>,
   @DoNotStrip
   @Keep
+  val worldLandmarks: Array<Landmark>,
+  @DoNotStrip
+  @Keep
   val handedness: Handedness,
   @DoNotStrip
   @Keep
@@ -34,6 +37,7 @@ data class DetectedHand(
     if (this === other) return true
     if (other !is DetectedHand) return false
     return Objects.deepEquals(this.landmarks, other.landmarks)
+      && Objects.deepEquals(this.worldLandmarks, other.worldLandmarks)
       && Objects.deepEquals(this.handedness, other.handedness)
       && Objects.deepEquals(this.score, other.score)
   }
@@ -41,6 +45,7 @@ data class DetectedHand(
   override fun hashCode(): Int {
     return arrayOf<Any?>(
       landmarks,
+      worldLandmarks,
       handedness,
       score
     ).contentDeepHashCode()
@@ -54,8 +59,8 @@ data class DetectedHand(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(landmarks: Array<Landmark>, handedness: Handedness, score: Double): DetectedHand {
-      return DetectedHand(landmarks, handedness, score)
+    private fun fromCpp(landmarks: Array<Landmark>, worldLandmarks: Array<Landmark>, handedness: Handedness, score: Double): DetectedHand {
+      return DetectedHand(landmarks, worldLandmarks, handedness, score)
     }
   }
 }

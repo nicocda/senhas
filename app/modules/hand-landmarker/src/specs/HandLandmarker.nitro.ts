@@ -15,6 +15,8 @@ export type Handedness = 'left' | 'right';
 export interface DetectedHand {
   /** The 21 landmarks in MediaPipe order: 0 wrist, 1-4 thumb, 5-8 index, ... 17-20 pinky. */
   landmarks: Landmark[];
+  /** The same 21 points in meters, centered on the hand (MediaPipe world landmarks). */
+  worldLandmarks: Landmark[];
   handedness: Handedness;
   /** Handedness confidence, 0..1. */
   score: number;

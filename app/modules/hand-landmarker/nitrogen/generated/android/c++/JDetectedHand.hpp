@@ -37,6 +37,8 @@ namespace margelo::nitro::handlandmarker {
       static const auto clazz = javaClassStatic();
       static const auto fieldLandmarks = clazz->getField<jni::JArrayClass<JLandmark>>("landmarks");
       jni::local_ref<jni::JArrayClass<JLandmark>> landmarks = this->getFieldValue(fieldLandmarks);
+      static const auto fieldWorldLandmarks = clazz->getField<jni::JArrayClass<JLandmark>>("worldLandmarks");
+      jni::local_ref<jni::JArrayClass<JLandmark>> worldLandmarks = this->getFieldValue(fieldWorldLandmarks);
       static const auto fieldHandedness = clazz->getField<JHandedness>("handedness");
       jni::local_ref<JHandedness> handedness = this->getFieldValue(fieldHandedness);
       static const auto fieldScore = clazz->getField<double>("score");
@@ -52,6 +54,16 @@ namespace margelo::nitro::handlandmarker {
           }
           return __vector;
         }(landmarks),
+        [&](auto&& __input) {
+          size_t __size = __input->size();
+          std::vector<Landmark> __vector;
+          __vector.reserve(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            auto __element = __input->getElement(__i);
+            __vector.push_back(__element->toCpp());
+          }
+          return __vector;
+        }(worldLandmarks),
         handedness->toCpp(),
         score
       );
@@ -63,7 +75,7 @@ namespace margelo::nitro::handlandmarker {
      */
     [[maybe_unused]]
     static jni::local_ref<JDetectedHand::javaobject> fromCpp(const DetectedHand& value) {
-      using JSignature = JDetectedHand(jni::alias_ref<jni::JArrayClass<JLandmark>>, jni::alias_ref<JHandedness>, double);
+      using JSignature = JDetectedHand(jni::alias_ref<jni::JArrayClass<JLandmark>>, jni::alias_ref<jni::JArrayClass<JLandmark>>, jni::alias_ref<JHandedness>, double);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -78,6 +90,16 @@ namespace margelo::nitro::handlandmarker {
           }
           return __array;
         }(value.landmarks),
+        [&](auto&& __input) {
+          size_t __size = __input.size();
+          jni::local_ref<jni::JArrayClass<JLandmark>> __array = jni::JArrayClass<JLandmark>::newArray(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            const auto& __element = __input[__i];
+            auto __elementJni = JLandmark::fromCpp(__element);
+            __array->setElement(__i, *__elementJni);
+          }
+          return __array;
+        }(value.worldLandmarks),
         JHandedness::fromCpp(value.handedness),
         value.score
       );
