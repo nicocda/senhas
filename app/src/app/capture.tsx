@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GuideHand } from '@/camera/guide-hand';
 import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { useHandTracking } from '@/camera/use-hand-tracking';
 import {
@@ -12,6 +13,7 @@ import {
   extraRounds,
   letterOf,
 } from '@/catalog/catalog';
+import { referenceFor } from '@/catalog/references';
 import { Button } from '@/components/button';
 import { randomUUID } from 'expo-crypto';
 
@@ -544,6 +546,7 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
   }
 
   const recording = phase === 'record';
+  const guide = referenceFor(current.entry.id);
   return (
     <View style={styles.fill}>
       <HandCamera
@@ -556,8 +559,18 @@ function CaptureRun({ setup }: { setup: SessionSetup }) {
         <Text style={styles.progress}>
           Ronda {current.round}/{ROUNDS + extraRounds(current.entry)} · {index + 1}/{queue.length}
         </Text>
-        <View style={[styles.letterBadge, { backgroundColor: current.entry.color }]}>
-          <Text style={styles.letter}>{letterOf(current.entry)}</Text>
+        <View style={styles.letterRow}>
+          <View style={[styles.letterBadge, { backgroundColor: current.entry.color }]}>
+            <Text style={styles.letter}>{letterOf(current.entry)}</Text>
+          </View>
+          {guide != null && (
+            <GuideHand
+              reference={guide}
+              color={current.entry.color}
+              size={150}
+              showFace={current.entry.location !== 'neutral'}
+            />
+          )}
         </View>
         {current.entry.id !== letterOf(current.entry) && (
           <Text style={styles.variant}>Variante {current.entry.id}</Text>
@@ -685,6 +698,11 @@ const styles = StyleSheet.create({
     color: 'white',
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  letterRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
   },
   letterBadge: {
     alignItems: 'center',
