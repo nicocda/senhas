@@ -4,6 +4,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/button';
 
 const LEVELS = [1, 2, 3, 4] as const;
+/** Levels 2-4 need the face reference and the glove first (etapas 4.3 y 4.5). */
+const ENABLED_LEVELS = new Set<number>([1]);
 
 /**
  * Home menu. The camera only starts inside the screens that need it, so the
@@ -22,11 +24,17 @@ export default function MenuScreen() {
 
       <View style={styles.section}>
         <Text style={styles.heading}>Grabar datos</Text>
-        <Text style={styles.hint}>Próximamente</Text>
+        <Text style={styles.hint}>Por ahora, solo el nivel 1</Text>
         <View style={styles.levels}>
           {LEVELS.map((level) => (
             <View key={level} style={styles.level}>
-              <Button label={`Nivel ${level}`} disabled />
+              <Button
+                label={`Nivel ${level}`}
+                disabled={!ENABLED_LEVELS.has(level)}
+                onPress={() =>
+                  router.push({ pathname: '/capture', params: { level: String(level) } })
+                }
+              />
             </View>
           ))}
         </View>

@@ -1,67 +1,26 @@
-import { useEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { HandSkeleton } from '@/camera/hand-skeleton';
-import { Button } from '@/components/button';
+import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { useHandTracking } from '@/camera/use-hand-tracking';
-import { useIsForeground } from '@/hooks/use-is-foreground';
+import { Button } from '@/components/button';
 
 export default function DetectScreen() {
-  const { hasPermission, canRequestPermission, requestPermission } = useCameraPermission();
-
-  useEffect(() => {
-    if (canRequestPermission) {
-      requestPermission();
-    }
-  }, [canRequestPermission, requestPermission]);
-
-  if (hasPermission) {
-    return <CameraPreview />;
-  }
-
-  // Once the user denies the permission, Android won't show the dialog again:
-  // the only way back is the app's system settings.
   return (
-    <View style={styles.centered}>
-      <Text style={styles.message}>Señas necesita la cámara para ver tus manos.</Text>
-      {canRequestPermission ? (
-        <Button label="Permitir cámara" onPress={requestPermission} />
-      ) : (
-        <Button label="Abrir ajustes" onPress={Linking.openSettings} />
-      )}
-    </View>
+    <CameraPermissionGate>
+      <LiveDetection />
+    </CameraPermissionGate>
   );
 }
 
-function CameraPreview() {
-  const device = useCameraDevice('front');
+function LiveDetection() {
   // One hand by default: two cost almost twice as much. A sign could switch this later.
   const [numHands, setNumHands] = useState<1 | 2>(1);
   const { frameOutput, landmarks, imageSize, stats } = useHandTracking({ numHands });
-  const isForeground = useIsForeground();
-
-  if (device == null) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.message}>No se encontró una cámara frontal.</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.fill}>
-      <Camera
-        style={styles.fill}
-        device={device}
-        outputs={[frameOutput]}
-        resizeMode="cover"
-        // The UI is locked to portrait, so frames must follow the screen, not the
-        // physical device; otherwise landmarks rotate when the phone is turned.
-        orientationSource="interface"
-        isActive={isForeground}
-      />
-      <HandSkeleton landmarks={landmarks} imageSize={imageSize} mirrored />
+      <HandCamera frameOutput={frameOutput} landmarks={landmarks} imageSize={imageSize} />
       <Text style={styles.stats}>
         {stats.fps} FPS · copia {stats.conversionMs} ms · MediaPipe {stats.inferenceMs} ms
       </Text>
@@ -78,17 +37,6 @@ function CameraPreview() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    padding: 24,
-  },
-  message: {
-    fontSize: 16,
-    textAlign: 'center',
   },
   bottomBar: {
     position: 'absolute',
