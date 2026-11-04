@@ -62,6 +62,21 @@ def still_mask(features: list[np.ndarray], threshold: float) -> list[bool]:
     return mask
 
 
+def share_of_takes_with_face(sessions: list[dict], entry_ids: set[str]) -> float:
+    """Share of the takes of these letters recorded with the face reference (at least
+    half of their frames have it). 0 if there are no takes."""
+    takes = [take for session in sessions for take in session["takes"] if take["entryId"] in entry_ids]
+    if not takes:
+        return 0.0
+    with_face = sum(
+        1
+        for take in takes
+        if take["frames"]
+        and sum(1 for frame in take["frames"] if frame.get("body")) >= len(take["frames"]) / 2
+    )
+    return with_face / len(takes)
+
+
 def samples_from_sessions(
     sessions: list[dict],
     entries: list[Entry],
