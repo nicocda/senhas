@@ -1,2 +1,12 @@
 # Datos de personas (landmarks de sesiones de captura): nunca al repo.
 languages/*/data/
+
+# Entorno virtual de Python y cachés.
+.venv/
+__pycache__/
+
+# Modelos entrenados: cómo llegan a la app se decide en el Hito 5.
+languages/*/models/
+
+# Resultados de entrenamiento que dependen de datos de personas (métricas, gráficos).
+runs/

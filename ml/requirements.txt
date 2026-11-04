@@ -1,0 +1,7 @@
+# Dependencias directas, con versión fija. Verificadas en PyPI el 2026-11-04
+# (todas con wheel para Windows y Python 3.12).
+# La lista completa con dependencias transitivas está en requirements.lock.txt.
+tensorflow==2.21.0
+ai-edge-litert==2.3.0
+scikit-learn==1.9.1
+matplotlib==3.11.2
