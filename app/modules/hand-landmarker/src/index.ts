@@ -16,8 +16,9 @@ export type {
 export type { HandLandmarkerOptions } from './specs/HandLandmarkerFactory.nitro';
 
 const DEFAULT_OPTIONS: HandLandmarkerOptions = {
-  // The manual alphabet uses one hand; a second hand would double the cost.
-  numHands: 1,
+  // Some LSA signs use both hands. In VIDEO mode MediaPipe skips palm detection
+  // only while it tracks numHands hands, so with one hand visible it runs every frame.
+  numHands: 2,
   minHandDetectionConfidence: 0.5,
   minHandPresenceConfidence: 0.5,
   minTrackingConfidence: 0.5,
