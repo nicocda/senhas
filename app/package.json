@@ -39,6 +39,7 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "phone": "adb -d reverse tcp:8081 tcp:8081 && adb -d shell am start -a android.intent.action.VIEW -d senhas://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081 com.nicogiordano.senhas",
     "ios": "expo run:ios",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",

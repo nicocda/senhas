@@ -21,6 +21,8 @@
 ## Comandos (desde `app/`)
 - `npm run check`: typecheck + lint + format:check. Tiene que pasar antes de cada commit.
 - `npm run android`: compila e instala en el emulador o dispositivo.
+- `npm run phone`: si la app del teléfono queda en "iniciando". Restablece el túnel USB (`adb reverse tcp:8081`), que se pierde cada vez que se corta la conexión, y abre la app apuntando a Metro.
+- Si Metro no encuentra un archivo nuevo ("Unable to resolve"), reiniciarlo con `npx expo start --dev-client --clear`.
 
 ## Comandos (desde `ml/`, con `.venv\Scripts\python`)
 - `pull_sessions.py`: copia por USB las sesiones exportadas de los teléfonos a `languages/aed/data/`.
