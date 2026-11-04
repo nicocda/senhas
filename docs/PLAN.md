@@ -189,6 +189,7 @@ se confirma en la etapa 4.2):
 - [ ] **Referencia del cuerpo, activable y desactivable** (como `numHands`): Hand Landmarker no ve la cara, y sin una referencia E, F, G, I, S, T e Y se confunden con otras. Se guardan **puntos mínimos**, nunca la malla de la cara (468 puntos, mucho más identificable). Candidatos, a medir en el teléfono antes de elegir (va en un ADR):
   - **Face Detector** (BlazeFace): 6 puntos (ojos, punta de la nariz, boca, tragos de las orejas), ~3 ms en CPU en un Pixel 6. Muy barato, pero no ve el pecho ni el cuello (letra F)
   - **Pose Landmarker** (variante lite): de sus 33 puntos guardamos solo 0–12 (nariz, ojos, orejas, comisuras de la boca, hombros). Cubre pecho y cuello, pero cuesta más
+  - Alcanza con una ubicación **aproximada**: con el Face Detector, cuello y pecho se pueden **estimar** a partir del cuadro de la cara (una o dos alturas de cara por debajo del mentón). Si eso alcanza para separar la F, gana el Face Detector por liviano. Se prueban ambos y se descarta uno
 - [ ] La captura la activa sola en los niveles que la necesitan (2 y 3)
 - [ ] Formato de la sesión con versión de esquema: persona (`P01`…), mano dominante, fecha, y por cada letra y ronda la **secuencia** de cuadros (timestamp, lateralidad, landmarks, worldLandmarks, referencia del cuerpo). Guardar secuencias sirve para todo: de una estática se toman cuadros sueltos; de una dinámica, la secuencia entera
 
