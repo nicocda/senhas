@@ -1,6 +1,6 @@
 import { Canvas, Path, Points, Skia, vec } from '@shopify/react-native-skia';
 import { HAND_CONNECTIONS } from 'hand-landmarker';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { type SharedValue, useDerivedValue, useSharedValue } from 'react-native-reanimated';
 
 const POINTS_PER_HAND = 21;
@@ -57,9 +57,18 @@ export function HandSkeleton({ landmarks, imageSize, mirrored }: HandSkeletonPro
   });
 
   return (
-    <Canvas style={StyleSheet.absoluteFill} onSize={canvasSize} pointerEvents="none">
-      <Path path={bones} style="stroke" strokeWidth={3} color="#00E676" />
-      <Points points={points} mode="points" strokeWidth={10} strokeCap="round" color="#FF1744" />
-    </Canvas>
+    // Canvas `onSize` measures the view on every frame, which logs warnings while
+    // the screen animates out. The wrapper's onLayout only fires when the size changes.
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      onLayout={({ nativeEvent: { layout } }) => {
+        canvasSize.value = { width: layout.width, height: layout.height };
+      }}>
+      <Canvas style={StyleSheet.absoluteFill}>
+        <Path path={bones} style="stroke" strokeWidth={3} color="#00E676" />
+        <Points points={points} mode="points" strokeWidth={10} strokeCap="round" color="#FF1744" />
+      </Canvas>
+    </View>
   );
 }

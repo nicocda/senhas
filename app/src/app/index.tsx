@@ -1,127 +1,75 @@
-import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { HandSkeleton } from '@/camera/hand-skeleton';
-import { useHandTracking } from '@/camera/use-hand-tracking';
-import { useIsForeground } from '@/hooks/use-is-foreground';
+import { Button } from '@/components/button';
 
-export default function CameraScreen() {
-  const { hasPermission, canRequestPermission, requestPermission } = useCameraPermission();
+const LEVELS = [1, 2, 3, 4] as const;
 
-  useEffect(() => {
-    if (canRequestPermission) {
-      requestPermission();
-    }
-  }, [canRequestPermission, requestPermission]);
+/**
+ * Home menu. The camera only starts inside the screens that need it, so the
+ * app doesn't run hand tracking (or keep the camera on) just by being open.
+ */
+export default function MenuScreen() {
+  const router = useRouter();
 
-  if (hasPermission) {
-    return <CameraPreview />;
-  }
-
-  // Once the user denies the permission, Android won't show the dialog again:
-  // the only way back is the app's system settings.
   return (
-    <View style={styles.centered}>
-      <Text style={styles.message}>Señas necesita la cámara para ver tus manos.</Text>
-      {canRequestPermission ? (
-        <Button label="Permitir cámara" onPress={requestPermission} />
-      ) : (
-        <Button label="Abrir ajustes" onPress={Linking.openSettings} />
-      )}
-    </View>
-  );
-}
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Señas</Text>
 
-function CameraPreview() {
-  const device = useCameraDevice('front');
-  // One hand by default: two cost almost twice as much. A sign could switch this later.
-  const [numHands, setNumHands] = useState<1 | 2>(1);
-  const { frameOutput, landmarks, imageSize, stats } = useHandTracking({ numHands });
-  const isForeground = useIsForeground();
-
-  if (device == null) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.message}>No se encontró una cámara frontal.</Text>
+      <View style={styles.section}>
+        <Button label="Detectar" onPress={() => router.push('/detect')} />
       </View>
-    );
-  }
 
-  return (
-    <View style={styles.fill}>
-      <Camera
-        style={styles.fill}
-        device={device}
-        outputs={[frameOutput]}
-        resizeMode="cover"
-        // The UI is locked to portrait, so frames must follow the screen, not the
-        // physical device; otherwise landmarks rotate when the phone is turned.
-        orientationSource="interface"
-        isActive={isForeground}
-      />
-      <HandSkeleton landmarks={landmarks} imageSize={imageSize} mirrored />
-      <Text style={styles.stats}>
-        {stats.fps} FPS · copia {stats.conversionMs} ms · MediaPipe {stats.inferenceMs} ms
-      </Text>
-      <View style={styles.bottomBar}>
-        <Button
-          label={numHands === 1 ? '1 mano' : '2 manos'}
-          onPress={() => setNumHands(numHands === 1 ? 2 : 1)}
-        />
+      <View style={styles.section}>
+        <Text style={styles.heading}>Grabar datos</Text>
+        <Text style={styles.hint}>Próximamente</Text>
+        <View style={styles.levels}>
+          {LEVELS.map((level) => (
+            <View key={level} style={styles.level}>
+              <Button label={`Nivel ${level}`} disabled />
+            </View>
+          ))}
+        </View>
       </View>
-    </View>
-  );
-}
 
-function Button({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable style={styles.button} onPress={onPress}>
-      <Text style={styles.buttonLabel}>{label}</Text>
-    </Pressable>
+      <View style={styles.section}>
+        <Text style={styles.heading}>Ejercicios</Text>
+        <Text style={styles.hint}>Por definir</Text>
+        <Button label="Ejercicios" disabled />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
+  container: {
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: 16,
+    gap: 32,
     padding: 24,
   },
-  message: {
-    fontSize: 16,
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  button: {
-    backgroundColor: '#208AEF',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  section: {
+    gap: 8,
   },
-  buttonLabel: {
-    color: 'white',
-    fontSize: 16,
+  heading: {
+    fontSize: 18,
     fontWeight: '600',
   },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 48,
-    alignSelf: 'center',
+  hint: {
+    color: '#6B7280',
   },
-  stats: {
-    position: 'absolute',
-    top: 48,
-    right: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    color: 'white',
-    fontVariant: ['tabular-nums'],
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  levels: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  level: {
+    flexBasis: '48%',
+    flexGrow: 1,
   },
 });
