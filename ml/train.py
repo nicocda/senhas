@@ -186,10 +186,15 @@ def main() -> None:
         },
         "trainedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
     }
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    for directory in (out_dir, run_dir):
+        write_json(directory / "manifest.json", manifest)
     write_capture_plan(args.language, args.level, recall, accuracy)
     print(f"Model: {out_dir}\nRun:   {run_dir}")
+
+
+def write_json(path: Path, data: dict) -> None:
+    # newline="\n": on Windows, text mode would write \r\n.
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
 
 
 # Letters the model gets wrong more often get more rounds in the next capture sessions.
@@ -210,7 +215,7 @@ def write_capture_plan(language: str, level: int, recall: dict[str, float], accu
         "extraRounds": extra,
         "basedOn": {"accuracy": round(accuracy, 3), "trainedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z")},
     }
-    path.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_json(path, plan)
     print("Extra rounds for the next sessions:", ", ".join(f"{k}+{v}" for k, v in extra.items()) or "none")
 
 
