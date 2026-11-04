@@ -87,7 +87,13 @@ def main() -> None:
         metavar="THRESHOLD",
         help="only frames where the hand is still (change per frame below THRESHOLD, e.g. 0.15)",
     )
-    parser.add_argument("--no-location", action="store_true", help="hand shape only, even on face letters")
+    parser.add_argument(
+        "--location",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="hand location relative to the face. auto: only if every take has the face; "
+        "on: always (frames without the face are dropped); off: hand shape only",
+    )
     parser.add_argument("--data-dir", type=Path, help="default: languages/<language>/data")
     parser.add_argument("--out-dir", type=Path, help="default: languages/<language>/models/<model name>")
     args = parser.parse_args()
@@ -111,8 +117,10 @@ def main() -> None:
     # without it would teach the model that "no face data" means some letters.
     needs_location = any(entry.location != "neutral" for entry in entries)
     face_share = share_of_takes_with_face(sessions, {entry.id for entry in entries})
-    with_location = not args.no_location and needs_location and face_share == 1.0
-    if needs_location and not with_location and not args.no_location:
+    with_location = needs_location and (
+        args.location == "on" or (args.location == "auto" and face_share == 1.0)
+    )
+    if needs_location and not with_location and args.location == "auto":
         print(f"Hand shape only: {face_share:.0%} of the takes have the face (location needs 100%)")
     samples = samples_from_sessions(sessions, entries, args.still, with_location)
     if not samples:

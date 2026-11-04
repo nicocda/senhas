@@ -224,8 +224,11 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] **Log de depuración** oculto (pulsación larga sobre el título del menú): sesiones, tomas con cuadros y cuadros con mano, exportaciones y errores
 - [x] Nivel 2 habilitado (con la referencia de la cara; el guante sigue pendiente)
 - [x] **Nivel 3 habilitado** (CH, H, J, Z): sin la regla de quietud (moverse es la letra); en su lugar se registra cuánto recorrió la punta del índice, en distancias entre ojos, para aprender qué es un movimiento normal antes de poner una regla
+- [x] Primera sesión del nivel 3 (P-924B): con los movimientos rápidos la mano se pierde (en la Z r2, 23/45 cuadros con mano; ~9 FPS con la cara). El momento del movimiento varía mucho dentro de la toma. El recorrido va de 9 a 28 distancias entre ojos (la Z, la que más); la CH casi no se desplaza (rota)
 - [ ] Modelo de secuencias para el nivel 3: con pocas secuencias, comparar **DTW + vecino más cercano** (alinea secuencias de distinta velocidad; anda con pocos ejemplos) contra una red recurrente chica (GRU)
-- [ ] Habilitar el nivel 4 (dos manos)
+- [x] **Nivel 4 habilitado** (Ñ, Q, W, X): dos manos; la regla de quietud mide la mano dominante (según la lateralidad de MediaPipe)
+- [ ] Modelo del nivel 4: forma de las dos manos y posición de una respecto de la otra
+- [ ] **Integrar todo en Detectar**: con dos manos → modelo del nivel 4; con una mano que se mueve → nivel 3; quieta → modelo estático
 
 #### Etapa 4.7 — Piloto y grabación
 
@@ -262,7 +265,7 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] Suavizado: votación sobre los últimos 10 cuadros (gana con 6 votos y 60% de confianza media; si no, "¿…?")
 - [x] **Un solo modelo para todas las letras estáticas de una mano** (`train.py --level static`, 21 clases): los niveles quedan solo para organizar la captura. En Detectar, el modo "Todas las letras" es el de por defecto (también se puede elegir nivel 1 o 2). Con los datos actuales, **89,8%** solo con la forma de la mano (la C y la E salen bien por la orientación de la palma)
 - [x] La captura enciende la cara en **todos** los niveles. Cuando todas las tomas tengan la cara (una sesión nueva del nivel 1), `train.py` entrena el modelo combinado **con ubicación**; mientras tanto avisa y usa solo la forma
-- [ ] Grabar otra sesión del nivel 1 (con la cara) para el modelo combinado con ubicación
+- [x] Otra sesión del nivel 1 con la cara (P-E350). **Nivel 1 entre sesiones: 87,2%** (a la mañana, aprendiendo, era 68%); la O pasó de 55% a 100%. Modelo combinado: solo forma con todos los datos **91,4%** vs forma + ubicación sin la sesión vieja (que no tiene cara) 81,3%: hoy pesan más los datos. `train.py --location auto|on|off`; la ubicación mejora la T (22% → 67%), así que con más sesiones con cara se vuelve a comparar
 - [ ] *(Anotado por Nico, probando Detectar)* La **O** (nivel 1) cuesta muchísimo y la **T** (nivel 2) también: coincide con los datos (O 55%, se confunde con la D; T 22%, con la K y la I)
 
 **Hecho cuando:** deletreas palabras simples y la app las reconoce en vivo.
