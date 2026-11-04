@@ -28,6 +28,14 @@ apuntan, el modelo tiene que poder ver la orientación.
 
 En el catálogo, estos pares se marcan con `sameHandshapeAs` (la E tiene `"sameHandshapeAs": "C"`).
 
+**Variación:** otro caso son las señas que **por definición son distintas**, pero que en la práctica
+salen parecidas, como D, O y Q. La forma "de diccionario" (forma citada) es una referencia, y cada
+persona la produce un poco distinta según su mano, la velocidad o la letra anterior. Ninguna sale
+idéntica a otra, pero se parecen. El modelo no aprende la definición, aprende de los ejemplos: si
+hay una diferencia consistente entre personas, la encuentra en las coordenadas, y si no la hay, la
+matriz de confusión lo muestra. En el catálogo se marcan con `confusableWith`. La Q, además, se
+separa por tener dos manos.
+
 ## Qué ve nuestro sistema de cada parámetro
 
 | Parámetro | Lo que tenemos | Consecuencia |

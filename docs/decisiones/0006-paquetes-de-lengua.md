@@ -52,6 +52,10 @@ ml/languages/aed/            ← código ISO 639-3 de la LSA
   se distingue por otro parámetro. Por ejemplo, la E tiene la forma de la C pero se hace en el ojo.
   El entrenamiento lo usa para saber qué clases necesitan la referencia de la cara, y la
   evaluación, para saber qué confusiones esperar.
+- **Clases parecidas:** `confusableWith` marca entradas que por definición son distintas pero en la
+  práctica se hacen parecidas (variación natural entre personas), como D, O y Q. No es una regla
+  para el modelo, que aprende de los ejemplos. Sirve para revisar esas confusiones en la
+  evaluación y para analizar qué puntos las separan.
 - **`verified: false`** hasta que una persona lo confirme contra la referencia de la CAS. La
   clasificación inicial se sacó de la ilustración.
 - **El `manifest.json` lo genera el entrenamiento**, nunca se escribe a mano. La app lo lee para

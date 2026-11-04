@@ -228,7 +228,8 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 - [ ] Entorno Python aislado (`venv`) con dependencias fijadas
 - [ ] Preprocesado: normalizar posición, escala y mano izquierda o derecha. **Conservar la orientación** respecto de la pantalla: M, N y P se distinguen porque apuntan hacia abajo
-- [ ] Entrenar el clasificador del nivel 1 (Keras). Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación, evaluarlo **dejando afuera a una persona por vez** (exactitud, matriz de confusión) y exportarlo a `.tflite`
+- [ ] Entrenar el clasificador del nivel 1 (Keras). Ojo: solo con la mano, una E se ve igual que una C; la E se resuelve en el Hito 6 con la ubicación
+- [ ] Analizar las clases marcadas con `confusableWith` (D y O): qué puntos las separan en los datos reales y cuánto se confunden, evaluarlo **dejando afuera a una persona por vez** (exactitud, matriz de confusión) y exportarlo a `.tflite`
 - [ ] Probar el `.tflite` en la PC con `ai-edge-litert`
 
 **Hecho cuando:** hay un dataset de 3–5 personas con las 28 letras, y el modelo del nivel 1 supera una exactitud acordada con personas que nunca vio, y se entiende por qué falla donde falla.
