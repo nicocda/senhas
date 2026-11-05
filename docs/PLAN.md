@@ -288,6 +288,8 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 > *Anotado por Nico (2026-11-04):* "con el abecedario solo no hacemos nada": hay que darle valor a las **palabras**, con una forma de ir cargándolas que sea dinámica. Antes de diseñar nada, **Nico va a hablar con una profesora de LSA**.
 
+**Investigación inicial (2026-11-05):** [palabras-investigacion.md](aprendizaje/palabras-investigacion.md): enfoques, segmentación, vocabulario y preguntas para la profesora.
+
 Ideas para cuando se retome (no son decisiones):
 
 - Una palabra en LSA es una **seña léxica**, no una palabra deletreada: casi todas tienen movimiento, muchas usan las dos manos y la ubicación respecto del cuerpo, y algunas, expresión facial (rasgos no manuales). Se parecen más al nivel 3 que al alfabeto
