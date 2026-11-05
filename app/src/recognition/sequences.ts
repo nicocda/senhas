@@ -116,6 +116,31 @@ export function dtwDistance(a: number[][], b: number[][]): number {
   return previous[m] / (n + m);
 }
 
+/**
+ * How wide the index fingertip's trajectory is: the diagonal of its bounding box,
+ * in eye distances (vector columns 2-3). Unlike the path length, a trembling hand
+ * keeps it small, because the back-and-forth doesn't add up.
+ */
+export function indexExtent(points: number[][]): number {
+  if (points.length === 0) {
+    return 0;
+  }
+  let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const point of points) {
+    minX = Math.min(minX, point[2]);
+    maxX = Math.max(maxX, point[2]);
+    minY = Math.min(minY, point[3]);
+    maxY = Math.max(maxY, point[3]);
+  }
+  return Math.hypot(maxX - minX, maxY - minY);
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
 export interface MovementPrediction {
   label: string;
   letter: string;
@@ -126,6 +151,8 @@ export class MovementRecognizer {
   readonly threshold: number;
 
   private readonly model: MovementModelFile;
+  /** Median index extent of each letter's templates: how wide its movement usually is. */
+  private readonly typicalExtents = new Map<string, number>();
 
   constructor(model: MovementModelFile) {
     this.model = model;
@@ -135,16 +162,37 @@ export class MovementRecognizer {
         `Movement model uses sequence v${model.sequence.version}, the app v${SEQUENCE_VERSION}. Rebuild it.`,
       );
     }
+    const extents = new Map<string, number[]>();
+    for (const template of model.templates) {
+      extents.set(template.label, [
+        ...(extents.get(template.label) ?? []),
+        indexExtent(template.frames),
+      ]);
+    }
+    for (const [label, values] of extents) {
+      this.typicalExtents.set(label, median(values));
+    }
   }
 
-  /** Closest template to these frame vectors, however far (null: too few frames). */
-  nearest(points: number[][]): MovementPrediction | null {
+  /** How wide this letter's movement usually is, in eye distances. */
+  typicalExtent(label: string): number {
+    return this.typicalExtents.get(label) ?? 0;
+  }
+
+  /**
+   * Closest template to these frame vectors, however far (null: too few frames).
+   * `exclude`: labels left out (letters not recognized live).
+   */
+  nearest(points: number[][], exclude?: ReadonlySet<string>): MovementPrediction | null {
     const sequence = movementSequence(points, this.model.sequence.length, this.model.sequence.trim);
     if (sequence == null) {
       return null;
     }
     let best: MovementPrediction | null = null;
     for (const template of this.model.templates) {
+      if (exclude?.has(template.label)) {
+        continue;
+      }
       const distance = dtwDistance(sequence, template.frames);
       if (best == null || distance < best.distance) {
         best = { label: template.label, letter: template.letter, distance };

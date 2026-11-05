@@ -49,6 +49,33 @@ TypeScript); si no, el modelo estático. DTW con 24 plantillas de 32 cuadros se 
 por segundo. Paridad verificada: las características de dos manos coinciden en 515/515 cuadros y
 DTW elige la misma plantilla en 12/12 tomas (diferencia de distancia 4e-7).
 
+**Prioridad a las letras estáticas (2026-11-05):** en vivo, una A con el pulso temblando salía como
+CH. Se simuló Detectar sobre las tomas grabadas (ventanas de 2,5 s cada 300 ms): en el **26%** de las
+ventanas de letras estáticas, DTW aceptaba una letra con movimiento (CH 75, Z 31, J 26 de 511). El
+recorrido (largo del camino del índice) suma el temblor y el ruido de los puntos de los ojos; el
+umbral de DTW es uno solo (1,70), fijado por la letra más variable. Se probaron, dejando afuera la
+sesión evaluada:
+
+| Regla | Ventanas estáticas que disparan | Efecto en H, J, Z |
+|---|---|---|
+| Ninguna (antes) | 132/511 | — |
+| Margen sobre la segunda letra (×1,4) | 29 | la Z deja de reconocerse |
+| **Amplitud ≥ 60% de la típica de la letra** | 78 (55 son CH) | se mantienen |
+| **Amplitud + sin CH** | **23** | se mantienen |
+
+- **Amplitud:** diagonal de la caja que encierra la trayectoria del índice. El temblor va y vuelve,
+  así que no la agranda; un movimiento real sí. La típica de cada letra es la mediana de sus
+  plantillas (H 6,3; J 5,2; Z 6,7; CH 1,7 distancias entre ojos). Se calcula en la app a partir del
+  `model.json`, sin reentrenar.
+- **La CH no se reconoce en vivo:** casi no se desplaza (rota), y su amplitud y su distancia DTW se
+  superponen con las de una mano quieta que tiembla o se acomoda. Sigue en el catálogo y en la
+  captura; Nico ya había propuesto sacarla.
+- Verificado con el `LiveRecognizer` real (Node) sobre todas las tomas: las tomas estáticas donde
+  aparece una letra con movimiento bajaron de 24/126 a 3/126 (J); H 6/6, J 6/6, Z 4/6 (antes 5/6,
+  la diferencia no depende del umbral: con 50% también da 4/6).
+- Lo que queda (transiciones grandes de verdad) se ataca con lo que propone la investigación de
+  palabras: posición de reposo y ejemplos de "ninguna".
+
 ## Verificación
 
 - La salida de TypeScript coincide con la del `.tflite`: la misma letra en **2578/2578** cuadros
