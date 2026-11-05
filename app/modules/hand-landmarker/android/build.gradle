@@ -75,6 +75,8 @@ android {
     minSdkVersion getExtOrIntegerDefault("minSdkVersion")
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
     buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+    // Keep rules for MediaPipe in release (R8) builds of any app using this module.
+    consumerProguardFiles "consumer-rules.pro"
 
     externalNativeBuild {
       cmake {
