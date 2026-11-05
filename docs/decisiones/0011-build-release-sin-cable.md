@@ -40,6 +40,17 @@ la release no usa.
 - Android la marca `DEBUGGABLE` y `pull_sessions.py` sigue leyendo las 7 sesiones, que
   sobrevivieron a la instalación encima de la build de debug.
 
+**R8 y MediaPipe (2026-11-05):** la primera release abría el menú pero se cerraba al entrar a
+Detectar o Grabar: `Field hostEnvironment_ for com.google.mediapipe.proto.MediaPipeLoggingProto$SystemInfo
+not found`. La release pasa por **R8** (`android.enableMinifyInReleaseBuilds=true`, el valor por
+defecto de Expo), que renombra o elimina lo que no ve usado; MediaPipe lee sus mensajes protobuf por
+reflexión y su código nativo llama a Java por nombre. Los AAR de MediaPipe no traen reglas. Se
+agregaron reglas *keep* en el módulo (`consumer-rules.pro` vía `consumerProguardFiles`), las que
+recomienda un mantenedor de MediaPipe en
+[google-ai-edge/mediapipe#6088](https://github.com/google-ai-edge/mediapipe/issues/6088). Plan B si
+no alcanzaran: desactivar R8 en la release. Lección: verificar la release entrando a las pantallas
+que usan código nativo, no solo viendo que abre el menú.
+
 ## Consecuencias
 
 - Para cambiar el código hay que volver a compilar la release (unos minutos). Para desarrollar, sigue
