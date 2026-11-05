@@ -2,7 +2,8 @@
  * Recognizes every letter in real time by picking the right model for each moment:
  * - two hands -> the two-handed classifier (level 4);
  * - one hand that traveled enough in the last seconds -> DTW against the movement
- *   templates (level 3); a match is shown for a while, ahead of static letters;
+ *   templates (level 3); only a (nearly) complete movement counts, and a match is
+ *   shown for a while, ahead of static letters;
  * - otherwise -> the static classifier (levels 1 and 2), smoothed by voting.
  */
 
@@ -12,7 +13,7 @@ import { debugLog } from '@/debug/debug-log';
 
 import type { Classifier } from './classifier';
 import { classifyHand } from './models';
-import { frameVector, type MovementRecognizer } from './sequences';
+import { frameVector, indexExtent, type MovementRecognizer } from './sequences';
 import { PredictionSmoother } from './smoothing';
 
 /** How far back a movement is looked for (the takes were 3 s). */
@@ -26,6 +27,19 @@ const MIN_MOVEMENT_TRAVEL = 3;
 const MOVEMENT_CHECK_MS = 300;
 /** How long a recognized movement letter stays on screen. */
 const MOVEMENT_HOLD_MS = 1500;
+/**
+ * A movement letter needs (almost) its whole movement: the fingertip's trajectory
+ * must be at least this share as wide as the letter's typical one. Static letters
+ * win otherwise. Measured on the recorded takes (ADR 0010): of 511 windows of held
+ * static letters, 132 fired a movement letter; with this rule and without CH, 23;
+ * H, J and Z kept their recognition.
+ */
+const MIN_MOVEMENT_COMPLETENESS = 0.6;
+/**
+ * Not recognized live: CH barely moves (~1.7 eye distances, a small rotation), as
+ * little as a trembling or settling hand, and no measure tried tells them apart.
+ */
+const LIVE_EXCLUDED = new Set(['CH']);
 
 export interface LiveResult {
   letter: string;
@@ -91,13 +105,22 @@ export class LiveRecognizer {
     const travel = this.travel();
     if (now - this.lastMovementCheck >= MOVEMENT_CHECK_MS && travel >= MIN_MOVEMENT_TRAVEL) {
       this.lastMovementCheck = now;
-      const nearest = this.movement.nearest(this.recent.map((item) => item.vector));
-      const match = nearest != null && nearest.distance <= this.movement.threshold ? nearest : null;
+      const points = this.recent.map((item) => item.vector);
+      const nearest = this.movement.nearest(points, LIVE_EXCLUDED);
+      const extent = indexExtent(points);
+      const required =
+        nearest == null
+          ? 0
+          : MIN_MOVEMENT_COMPLETENESS * this.movement.typicalExtent(nearest.label);
+      const match =
+        nearest != null && nearest.distance <= this.movement.threshold && extent >= required
+          ? nearest
+          : null;
       // Debug panel: why a movement letter was (or wasn't) recognized.
       debugLog(
         nearest == null
           ? `DTW: pocos cuadros, recorrido ${travel.toFixed(1)}`
-          : `DTW: ${nearest.label} ${nearest.distance.toFixed(2)} (umbral ${this.movement.threshold.toFixed(2)}), recorrido ${travel.toFixed(1)}`,
+          : `DTW: ${nearest.label} ${nearest.distance.toFixed(2)} (umbral ${this.movement.threshold.toFixed(2)}), amplitud ${extent.toFixed(1)} (mín. ${required.toFixed(1)}), recorrido ${travel.toFixed(1)}`,
         match == null ? 'warn' : 'info',
       );
       if (match != null) {
