@@ -282,6 +282,21 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 - [x] Otra sesión del nivel 1 con la cara (P-E350). **Nivel 1 entre sesiones: 87,2%** (a la mañana, aprendiendo, era 68%); la O pasó de 55% a 100%. Modelo combinado: solo forma con todos los datos **91,4%** vs forma + ubicación sin la sesión vieja (que no tiene cara) 81,3%: hoy pesan más los datos. `train.py --location auto|on|off`; la ubicación mejora la T (22% → 67%), así que con más sesiones con cara se vuelve a comparar
 - [ ] *(Anotado por Nico, probando Detectar)* La **O** (nivel 1) cuesta muchísimo y la **T** (nivel 2) también: coincide con los datos (O 55%, se confunde con la D; T 22%, con la K y la I)
 
+#### Motor de interpretación: de cuadros sueltos a texto (2026-11-06)
+
+> *Pedido de Nico:* distinguir una **transición**, una **vibración** y una **letra completa**. Una Z solo se puede decidir mirando el pasado (cuando terminó); tres dedos levantados anticipan una H. Trabajar con tiempos, no con cantidad de cuadros, y traducir a texto lo que se detecta.
+
+Hoy `live.ts` decide cuadro a cuadro con reglas sueltas. La idea es pasar a **segmentos**: el flujo se corta en tramos de **detención** (la mano quieta en una forma) y de **movimiento**, como en el modelo *Movement-Hold* de la lingüística de señas ([Liddell y Johnson, 1989](https://cnlse.es/es/recursos/biblioteca/american-sign-language-phonological-base): cada seña es una alternancia de detenciones y movimientos, como consonantes y vocales). Una letra estática es una detención con forma estable; una letra con movimiento es un movimiento completo que coincide con una plantilla; una transición es un movimiento entre dos detenciones que no coincide con nada; una vibración no llega a ser movimiento. Cada segmento se decide **cuando termina**, mirando el pasado; mientras dura, se muestra una hipótesis provisional.
+
+- [ ] **5.1 Datos y medida.** Sin deletreos reales no se puede medir nada de esto: las tomas actuales son letras sueltas
+  - [x] Pantalla **Deletrear palabras** (`app/spell.tsx`): 14 palabras de `ml/languages/aed/spelling.json` que cubren las 27 letras (sin la CH), letras dobles (PERRO, LLAVE) y repetidas. Cada toma empieza y termina en reposo; «Terminé» corta antes. Se guarda como una toma más con `entryId` `spell:PALABRA` (el entrenamiento la ignora)
+  - [ ] Grabar una sesión de deletreo
+  - [ ] Evaluador: correr el motor real (TypeScript, en Node) sobre los deletreos y medir el **error por letra** (distancia de edición entre lo reconocido y la palabra)
+- [ ] **5.2 Tiempo, no cuadros.** Todo en milisegundos y velocidades en distancias entre ojos por segundo (hoy el suavizado son 10 cuadros, que son 0,5 s a 19 FPS o 0,8 s a 13)
+- [ ] **5.3 Segmentador movimiento–detención.** Velocidad suavizada con histéresis (un umbral para arrancar y otro para parar) y duración mínima de cada tramo; letra estática = detención con forma estable ≥ N ms; letra con movimiento = movimiento completo, decidido al terminar; transición y vibración se descartan
+- [ ] **5.4 Texto.** Se confirma una letra al cerrar su segmento; la misma letra dos veces (PERRO) necesita una señal (preguntarle a la profesora cómo se marca en LSA); el reposo largo es un espacio. Se ve la palabra que se va formando, con la hipótesis provisional en gris
+- [ ] **5.5 Contexto.** La forma de la mano al empezar un movimiento como pista (la que anticipa una H o una J) y, al final, un diccionario de palabras para corregir letras dudosas
+
 **Hecho cuando:** deletreas palabras simples y la app las reconoce en vivo.
 **Aprendes:** inferencia en el dispositivo, rendimiento, UX de resultados con incertidumbre.
 
