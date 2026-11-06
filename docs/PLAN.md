@@ -288,10 +288,10 @@ Escenario: varios teléfonos graban en paralelo y después todo se junta en uno 
 
 Hoy `live.ts` decide cuadro a cuadro con reglas sueltas. La idea es pasar a **segmentos**: el flujo se corta en tramos de **detención** (la mano quieta en una forma) y de **movimiento**, como en el modelo *Movement-Hold* de la lingüística de señas ([Liddell y Johnson, 1989](https://cnlse.es/es/recursos/biblioteca/american-sign-language-phonological-base): cada seña es una alternancia de detenciones y movimientos, como consonantes y vocales). Una letra estática es una detención con forma estable; una letra con movimiento es un movimiento completo que coincide con una plantilla; una transición es un movimiento entre dos detenciones que no coincide con nada; una vibración no llega a ser movimiento. Cada segmento se decide **cuando termina**, mirando el pasado; mientras dura, se muestra una hipótesis provisional.
 
-- [ ] **5.1 Datos y medida.** Sin deletreos reales no se puede medir nada de esto: las tomas actuales son letras sueltas
+- [x] **5.1 Datos y medida.** Sin deletreos reales no se puede medir nada de esto: las tomas actuales son letras sueltas
   - [x] Pantalla **Deletrear palabras** (`app/spell.tsx`): 14 palabras de `ml/languages/aed/spelling.json` que cubren las 27 letras (sin la CH), letras dobles (PERRO, LLAVE) y repetidas. Cada toma empieza y termina en reposo; «Terminé» corta antes. Se guarda como una toma más con `entryId` `spell:PALABRA` (el entrenamiento la ignora)
   - [x] Dos sesiones de deletreo (2026-11-06): P-5299 lenta, P-32A3 más rápida
-  - [x] Evaluador `npm run evaluate:spelling` (`app/scripts/evaluate-spelling.ts`): pasa cada deletreo por el mismo `LiveRecognizer` de Detectar, en Node, y mide el **error por letra** (distancia de edición entre lo reconocido y la palabra, como el *character error rate* de reconocimiento de voz)
+  - [x] Evaluador `npm run evaluate:spelling` (`app/scripts/evaluate-spelling.ts`): pasa cada deletreo por el mismo motor de Detectar, en Node, y mide el **error por letra** (distancia de edición entre lo reconocido y la palabra, como el *character error rate* de reconocimiento de voz)
   - **Línea de base del motor actual: 31% lenta, 44% rápida.** Lo que se vio:
     - El **clasificador sí ve casi todas las letras** cuadro a cuadro (MAYO rápido: M, A, Y y O durante 5–9 cuadros cada una), pero el motor devuelve "JO": se pierden en las reglas, no en el modelo
     - **J y Z falsas** en las transiciones (LLAVE → LJAVE, PERRO → PJRZJO, TAXI → TAJXI): mientras dura una letra con movimiento (1,5 s) tapa a las estáticas
@@ -301,8 +301,10 @@ Hoy `live.ts` decide cuadro a cuadro con reglas sueltas. La idea es pasar a **se
     - **Letras dobles** (LL, RR): hoy imposibles, se escriben una vez
     - Confusiones del modelo: Y → U (MAYO), E → F (QUESO), T → I (FOTO), W ↔ X
   - Experimento (sin tocar la app): contar una letra solo si el clasificador la ve firme durante **≥ 350 ms** (tiempo, no cuadros), sin letras con movimiento: **25% lenta, 31% rápida**. El segmentador (5.3) arranca de acá y le agrega el movimiento
-- [ ] **5.2 Tiempo, no cuadros.** Todo en milisegundos y velocidades en distancias entre ojos por segundo (hoy el suavizado son 10 cuadros, que son 0,5 s a 19 FPS o 0,8 s a 13)
-- [ ] **5.3 Segmentador movimiento–detención.** Velocidad suavizada con histéresis (un umbral para arrancar y otro para parar) y duración mínima de cada tramo; letra estática = detención con forma estable ≥ N ms; letra con movimiento = movimiento completo, decidido al terminar; transición y vibración se descartan
+- [x] **5.2 Tiempo, no cuadros** y **5.3 Segmentador movimiento–detención** (2026-11-06, [ADR 0012](decisiones/0012-motor-de-interpretacion.md)): `recognition/interpreter.ts` reemplaza a `live.ts`. Letra estática = la misma forma ≥ 350 ms, aunque el brazo se mueva (deletreando rápido se desplaza a 3–4 distancias entre ojos por segundo mientras sostiene la letra). Movimiento = el índice pasa de 3 y vuelve a bajar de 1,5 (histéresis); recién al terminar se compara con H, J y Z, con un **umbral por letra** (`train_sequences.py`), y si se acepta retira las letras que eran su forma inicial. Detectar ("Deletrear") muestra el texto, la letra que se está sosteniendo en gris y un botón Borrar. **Error por letra: lenta 31% → 21%, rápida 44% → 30%**
+  - [ ] Probarlo en vivo
+  - [ ] Grabar una sesión nueva (idealmente otra persona) y medirla sin haberla mirado: los umbrales se eligieron con estas dos
+  - Lo que queda: letras dobles (5.4, falta la respuesta de la profesora), la primera letra al deletrear rápido, confusiones Y→U, E→F, T→I y la J de JUEGO lento (0,89 contra un umbral de 0,86)
 - [ ] **5.4 Texto.** Se confirma una letra al cerrar su segmento; la misma letra dos veces (PERRO) necesita una señal (preguntarle a la profesora cómo se marca en LSA); el reposo largo es un espacio. Se ve la palabra que se va formando, con la hipótesis provisional en gris
 - [ ] **5.5 Contexto.** La forma de la mano al empezar un movimiento como pista (la que anticipa una H o una J) y, al final, un diccionario de palabras para corregir letras dudosas
 

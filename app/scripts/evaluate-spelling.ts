@@ -1,10 +1,14 @@
 /**
- * Measures the live interpretation engine on recorded spellings (Hito 5): every
- * spelling take ("spell:WORD") goes frame by frame through the same LiveRecognizer
- * that Detectar uses, and the text it produces is compared with the word.
+ * Measures the interpretation engine (src/recognition/interpreter.ts) on recorded
+ * data, frame by frame, exactly as Detectar runs it:
+ *
+ * - spellings ("spell:WORD" takes): the text written vs the word;
+ * - single letters (the takes recorded by level): the text should be just that
+ *   letter. Optimistic for static letters (the classifier was trained on them),
+ *   but it shows whether held letters write movement letters.
  *
  *   npm run evaluate:spelling                 (every session in ml/languages/aed/data)
- *   npm run evaluate:spelling -- <file.json>  (some sessions; PowerShell: see CLAUDE.md)
+ *   npm run evaluate:spelling -- <file.json>  (some sessions)
  *
  * Letter error = edit distance (insertions, deletions, substitutions) / letters in
  * the word, like the character error rate used for speech recognition.
@@ -13,15 +17,16 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { catalog, letterOf } from '@/catalog/catalog';
 import type { SessionExport } from '@/dataset/export';
-import { LiveRecognizer } from '@/recognition/live';
+import { Interpreter, type InterpreterOptions } from '@/recognition/interpreter';
 import { classifierFor, movementRecognizerFor } from '@/recognition/models';
 
 const DATA_DIR = join(import.meta.dirname, '../../ml/languages/aed/data');
 const PREFIX = 'spell:';
 
 /** "LLAVE" -> L L A V E; "CHOCLO" -> CH O C L O. */
-function lettersOf(word: string): string[] {
+export function lettersOf(word: string): string[] {
   return (word.match(/CH|LL|./gu) ?? []).flatMap((part) => (part === 'LL' ? ['L', 'L'] : [part]));
 }
 
@@ -44,62 +49,156 @@ export function editDistance(a: string[], b: string[]): number {
   return previous[b.length];
 }
 
-const files = process.argv.slice(2);
-const names =
-  files.length > 0 ? files : readdirSync(DATA_DIR).filter((name) => name.endsWith('.json'));
+type Take = SessionExport['takes'][number];
 
-// The engine logs every DTW attempt to the in-app debug panel; here it's noise.
-console.log = () => {};
-const print = (text: string) => process.stdout.write(text + '\n');
-
-let allErrors = 0;
-let allLetters = 0;
-for (const name of names) {
-  const data = JSON.parse(readFileSync(join(DATA_DIR, name), 'utf8')) as SessionExport;
-  const takes = data.takes.filter((take) => take.entryId.startsWith(PREFIX));
-  if (takes.length === 0) {
-    continue;
+/** The text the engine writes for a take. */
+export function interpret(
+  take: Take,
+  dominantHand: 'left' | 'right',
+  options: Partial<InterpreterOptions> = {},
+): string[] {
+  const engine = new Interpreter(
+    classifierFor('static'),
+    classifierFor(4),
+    movementRecognizerFor(),
+    dominantHand,
+    () => {},
+    options,
+  );
+  let text: string[] = [];
+  for (const frame of take.frames) {
+    text = engine.push(
+      {
+        hands: frame.hands,
+        body: frame.body,
+        imageWidth: take.imageWidth ?? 0,
+        imageHeight: take.imageHeight ?? 0,
+      },
+      frame.t,
+    ).text;
   }
-  print(`\n${data.session.participant} (${name})`);
-  let errors = 0;
-  let letters = 0;
-  for (const take of takes) {
-    const word = take.entryId.slice(PREFIX.length);
-    const engine = new LiveRecognizer(
-      classifierFor('static'),
-      classifierFor(4),
-      movementRecognizerFor(),
-      data.session.dominantHand,
-    );
-    // What the screen would show, as text: each new letter that appears (a letter
-    // that stays, or comes back after "not sure", is written once).
-    const text: string[] = [];
-    for (const frame of take.frames) {
-      const result = engine.push(
-        {
-          hands: frame.hands,
-          body: frame.body,
-          imageWidth: take.imageWidth ?? 0,
-          imageHeight: take.imageHeight ?? 0,
-        },
-        frame.t,
-      );
-      if (result != null && text.at(-1) !== result.letter) {
-        text.push(result.letter);
+  return text;
+}
+
+export interface SessionResult {
+  participant: string;
+  words: { word: string; text: string[]; errors: number }[];
+  errors: number;
+  letters: number;
+}
+
+export interface Evaluation {
+  spelling: SessionResult[];
+  /** Single-letter takes whose text is exactly their letter. */
+  singleExact: number;
+  singleTotal: number;
+  /** Single static-letter takes where a movement letter was written. */
+  falseMovements: number;
+  staticTakes: number;
+  /** Movement-letter takes where their letter was written. */
+  movementFound: number;
+  movementTakes: number;
+}
+
+export function loadSessions(names?: string[]): SessionExport[] {
+  const files =
+    names != null && names.length > 0
+      ? names
+      : readdirSync(DATA_DIR).filter((name) => name.endsWith('.json'));
+  return files.map(
+    (name) => JSON.parse(readFileSync(join(DATA_DIR, name), 'utf8')) as SessionExport,
+  );
+}
+
+export function evaluate(
+  sessions: SessionExport[],
+  options: Partial<InterpreterOptions> = {},
+): Evaluation {
+  const entries = new Map(catalog.letters.map((entry) => [entry.id, entry]));
+  const movementLetters = new Set(catalog.letters.filter((entry) => entry.movement).map(letterOf));
+  const result: Evaluation = {
+    spelling: [],
+    singleExact: 0,
+    singleTotal: 0,
+    falseMovements: 0,
+    staticTakes: 0,
+    movementFound: 0,
+    movementTakes: 0,
+  };
+  for (const data of sessions) {
+    const hand = data.session.dominantHand;
+    const session: SessionResult = {
+      participant: data.session.participant,
+      words: [],
+      errors: 0,
+      letters: 0,
+    };
+    for (const take of data.takes) {
+      if (take.entryId.startsWith(PREFIX)) {
+        const word = take.entryId.slice(PREFIX.length);
+        const text = interpret(take, hand, options);
+        const expected = lettersOf(word);
+        const errors = editDistance(text, expected);
+        session.words.push({ word, text, errors });
+        session.errors += errors;
+        session.letters += expected.length;
+        continue;
+      }
+      const entry = entries.get(take.entryId);
+      // CH isn't recognized live (ADR 0010).
+      if (entry == null || entry.id === 'CH') {
+        continue;
+      }
+      const text = interpret(take, hand, options);
+      const letter = letterOf(entry);
+      result.singleTotal++;
+      if (text.length === 1 && text[0] === letter) {
+        result.singleExact++;
+      }
+      if (entry.movement) {
+        result.movementTakes++;
+        if (text.includes(letter)) {
+          result.movementFound++;
+        }
+      } else if (entry.hands === 1) {
+        result.staticTakes++;
+        if (text.some((item) => movementLetters.has(item))) {
+          result.falseMovements++;
+        }
       }
     }
-    const expected = lettersOf(word);
-    const distance = editDistance(text, expected);
-    errors += distance;
-    letters += expected.length;
-    print(`  ${word.padEnd(8)} → ${(text.join('') || '—').padEnd(10)} ${distance} errores`);
+    if (session.words.length > 0) {
+      result.spelling.push(session);
+    }
   }
-  print(`  Error por letra: ${errors}/${letters} = ${Math.round((errors / letters) * 100)}%`);
-  allErrors += errors;
-  allLetters += letters;
+  return result;
 }
-if (allLetters === 0) {
-  print('No hay tomas de deletreo.');
-} else {
-  print(`\nTotal: ${allErrors}/${allLetters} = ${Math.round((allErrors / allLetters) * 100)}%`);
+
+const percent = (part: number, total: number) =>
+  `${part}/${total} = ${Math.round((part / Math.max(total, 1)) * 100)}%`;
+
+if (import.meta.main) {
+  // The engine logs to the in-app debug panel through console.log; here it's noise.
+  const print = console.log;
+  console.log = () => {};
+  const result = evaluate(loadSessions(process.argv.slice(2)));
+  let errors = 0;
+  let letters = 0;
+  for (const session of result.spelling) {
+    print(`\n${session.participant}`);
+    for (const { word, text, errors: wordErrors } of session.words) {
+      print(`  ${word.padEnd(8)} → ${(text.join('') || '—').padEnd(10)} ${wordErrors} errores`);
+    }
+    print(`  Error por letra: ${percent(session.errors, session.letters)}`);
+    errors += session.errors;
+    letters += session.letters;
+  }
+  print(`\nDeletreo, error por letra: ${percent(errors, letters)}`);
+  print(`Letras sueltas exactas: ${percent(result.singleExact, result.singleTotal)}`);
+  print(
+    `Letras quietas que escriben una con movimiento: ${percent(result.falseMovements, result.staticTakes)}`,
+  );
+  print(
+    `Letras con movimiento encontradas: ${percent(result.movementFound, result.movementTakes)}`,
+  );
 }
