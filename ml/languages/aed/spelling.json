@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "note": "Palabras para grabar deletreos y medir el motor de interpretación (Hito 5). Entre todas cubren las 27 letras sin la CH (que no se reconoce en vivo), letras dobles (PERRO, LLAVE) y repetidas (DEDO, KIWI). Cada letra tiene que existir en letters.json.",
+  "words": [
+    "HOLA",
+    "CASA",
+    "JUEGO",
+    "TAZA",
+    "PERRO",
+    "LLAVE",
+    "QUESO",
+    "ÑANDU",
+    "KIWI",
+    "TAXI",
+    "BICI",
+    "FOTO",
+    "MAYO",
+    "DEDO"
+  ]
+}

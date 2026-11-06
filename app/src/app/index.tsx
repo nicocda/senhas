@@ -42,6 +42,7 @@ export default function MenuScreen() {
             </View>
           ))}
         </View>
+        <Button label="Deletrear palabras" onPress={() => router.push('/spell')} />
       </View>
 
       <View style={styles.section}>
