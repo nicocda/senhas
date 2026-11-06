@@ -28,6 +28,7 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@types/node": "~24.19.2",
     "@types/react": "~19.3.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
@@ -43,10 +44,11 @@
     "release:phone": "cd android && .\\gradlew.bat app:assembleRelease -PreactNativeArchitectures=arm64-v8a && adb -d install -r app/build/outputs/apk/release/app-release.apk",
     "ios": "expo run:ios",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm run lint && npm run format:check"
+    "check": "npm run typecheck && npm run lint && npm run format:check",
+    "evaluate:spelling": "node --no-warnings --import ./scripts/node-loader.mjs scripts/evaluate-spelling.ts"
   },
   "private": true
 }

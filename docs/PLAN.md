@@ -290,8 +290,17 @@ Hoy `live.ts` decide cuadro a cuadro con reglas sueltas. La idea es pasar a **se
 
 - [ ] **5.1 Datos y medida.** Sin deletreos reales no se puede medir nada de esto: las tomas actuales son letras sueltas
   - [x] Pantalla **Deletrear palabras** (`app/spell.tsx`): 14 palabras de `ml/languages/aed/spelling.json` que cubren las 27 letras (sin la CH), letras dobles (PERRO, LLAVE) y repetidas. Cada toma empieza y termina en reposo; «Terminé» corta antes. Se guarda como una toma más con `entryId` `spell:PALABRA` (el entrenamiento la ignora)
-  - [ ] Grabar una sesión de deletreo
-  - [ ] Evaluador: correr el motor real (TypeScript, en Node) sobre los deletreos y medir el **error por letra** (distancia de edición entre lo reconocido y la palabra)
+  - [x] Dos sesiones de deletreo (2026-11-06): P-5299 lenta, P-32A3 más rápida
+  - [x] Evaluador `npm run evaluate:spelling` (`app/scripts/evaluate-spelling.ts`): pasa cada deletreo por el mismo `LiveRecognizer` de Detectar, en Node, y mide el **error por letra** (distancia de edición entre lo reconocido y la palabra, como el *character error rate* de reconocimiento de voz)
+  - **Línea de base del motor actual: 31% lenta, 44% rápida.** Lo que se vio:
+    - El **clasificador sí ve casi todas las letras** cuadro a cuadro (MAYO rápido: M, A, Y y O durante 5–9 cuadros cada una), pero el motor devuelve "JO": se pierden en las reglas, no en el modelo
+    - **J y Z falsas** en las transiciones (LLAVE → LJAVE, PERRO → PJRZJO, TAXI → TAJXI): mientras dura una letra con movimiento (1,5 s) tapa a las estáticas
+    - **Solo 8–9 cuadros por segundo** (113–127 ms entre cuadros) con dos manos y la cara, contra 13–19 de la captura con una mano: el suavizado de 10 cuadros pide más de medio segundo quieto, y una letra rápida dura eso
+    - La **primera letra** se pierde seguido en la sesión rápida (CASA → ASA, TAZA → A): la mano llega desde el reposo y casi no se detiene
+    - Entre dos letras aparece 1 o 2 cuadros de **C** (la mano curvada a mitad de camino): una transición, no una letra
+    - **Letras dobles** (LL, RR): hoy imposibles, se escriben una vez
+    - Confusiones del modelo: Y → U (MAYO), E → F (QUESO), T → I (FOTO), W ↔ X
+  - Experimento (sin tocar la app): contar una letra solo si el clasificador la ve firme durante **≥ 350 ms** (tiempo, no cuadros), sin letras con movimiento: **25% lenta, 31% rápida**. El segmentador (5.3) arranca de acá y le agrega el movimiento
 - [ ] **5.2 Tiempo, no cuadros.** Todo en milisegundos y velocidades en distancias entre ojos por segundo (hoy el suavizado son 10 cuadros, que son 0,5 s a 19 FPS o 0,8 s a 13)
 - [ ] **5.3 Segmentador movimiento–detención.** Velocidad suavizada con histéresis (un umbral para arrancar y otro para parar) y duración mínima de cada tramo; letra estática = detención con forma estable ≥ N ms; letra con movimiento = movimiento completo, decidido al terminar; transición y vibración se descartan
 - [ ] **5.4 Texto.** Se confirma una letra al cerrar su segmento; la misma letra dos veces (PERRO) necesita una señal (preguntarle a la profesora cómo se marca en LSA); el reposo largo es un espacio. Se ve la palabra que se va formando, con la hipótesis provisional en gris
