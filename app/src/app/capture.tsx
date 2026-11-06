@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GuideHand } from '@/camera/guide-hand';
@@ -15,7 +15,12 @@ import {
 } from '@/catalog/catalog';
 import { referenceFor } from '@/catalog/references';
 import { Button } from '@/components/button';
-import { randomUUID } from 'expo-crypto';
+import {
+  ConsentCheckbox,
+  DominantHandChoice,
+  newParticipantCode,
+  ParticipantCode,
+} from '@/components/session-setup';
 
 import { createSession, deleteSession, discardTake, saveTake } from '@/dataset/db';
 import { handLocation, indexTravel, normalizeHand, steadyMs } from '@/dataset/features';
@@ -56,11 +61,6 @@ interface SessionSetup {
 function parseSeconds(text: string): number | null {
   const value = Number(text.trim().replace(',', '.'));
   return Number.isFinite(value) && value > 0 && value <= MAX_RECORD_SECONDS ? value : null;
-}
-
-/** Short pseudonymous code, e.g. P-7F3A. The session itself has a full UUID. */
-function newParticipantCode(): string {
-  return `P-${randomUUID().slice(0, 4).toUpperCase()}`;
 }
 
 export default function CaptureScreen() {
@@ -168,11 +168,7 @@ function SetupForm({
           </Text>
         )}
 
-        <Text style={styles.label}>Código asignado</Text>
-        <Text style={styles.code}>{participant}</Text>
-        <Text style={styles.hint}>
-          Sin nombres: anotalo si la persona quiere que después se borren sus datos.
-        </Text>
+        <ParticipantCode code={participant} />
 
         <Text style={styles.label}>Segundos de grabación por letra</Text>
         <TextInput
@@ -187,35 +183,8 @@ function SetupForm({
           </Text>
         )}
 
-        <Text style={styles.label}>Mano dominante</Text>
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <Choice
-              label="Derecha"
-              selected={dominantHand === 'right'}
-              onPress={() => setDominantHand('right')}
-            />
-          </View>
-          <View style={styles.flex}>
-            <Choice
-              label="Izquierda"
-              selected={dominantHand === 'left'}
-              onPress={() => setDominantHand('left')}
-            />
-          </View>
-        </View>
-
-        <Pressable
-          style={styles.consent}
-          onPress={() => setConsent(!consent)}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: consent }}>
-          <Text style={styles.checkbox}>{consent ? '☑' : '☐'}</Text>
-          <Text style={styles.consentText}>
-            Acepto que se guarden las coordenadas de mi mano (nunca imágenes ni video) en este
-            teléfono, para entrenar un modelo que reconozca la LSA. Puedo pedir que se borren.
-          </Text>
-        </Pressable>
+        <DominantHandChoice value={dominantHand} onChange={setDominantHand} />
+        <ConsentCheckbox checked={consent} onChange={setConsent} />
 
         <Button
           label={starting ? 'Preparando…' : 'Empezar'}
@@ -224,26 +193,6 @@ function SetupForm({
         />
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function Choice({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      style={[styles.choice, selected && styles.choiceSelected]}
-      onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}>
-      <Text style={[styles.choiceLabel, selected && styles.choiceLabelSelected]}>{label}</Text>
-    </Pressable>
   );
 }
 
