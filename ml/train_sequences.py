@@ -57,14 +57,24 @@ def main() -> None:
                 right += predicted == label
         print(f"Across sessions: {right}/{total} = {right / total:.0%}")
     loo_right = 0
+    correct_by_label: dict[str, list[float]] = defaultdict(list)
     for i, (label, sequence) in enumerate(templates):
         predicted, distance = nearest(sequence, templates[:i] + templates[i + 1 :])
         if predicted == label:
             loo_right += 1
             correct_distances.append(distance)
+            correct_by_label[label].append(distance)
     print(f"Leaving one take out: {loo_right}/{len(templates)} = {loo_right / len(templates):.0%}")
     threshold = max(correct_distances) * THRESHOLD_MARGIN
     print(f"Distance threshold: {threshold:.2f} (largest correct match {max(correct_distances):.2f})")
+    # One threshold per letter, with the same rule: a single global one is set by the
+    # most variable letter (Z) and lets through transitions that look like J
+    # (ADR 0012). A letter without correct matches keeps the global one.
+    thresholds = {
+        label: round(max(correct_by_label[label]) * THRESHOLD_MARGIN, 4) if correct_by_label[label] else round(threshold, 4)
+        for label in sorted({label for label, _ in templates})
+    }
+    print("Per letter: " + ", ".join(f"{label} {value:.2f}" for label, value in thresholds.items()))
 
     letters = {e.id: e.letter for e in entries}
     out_dir = LANGUAGES_DIR / args.language / "models" / "movement"
@@ -81,6 +91,7 @@ def main() -> None:
             "location": LOCATION_VERSION,
         },
         "threshold": round(threshold, 4),
+        "thresholds": thresholds,
         "evaluation": {
             "acrossSessions": right / total if total else None,
             "leaveOneTakeOut": loo_right / len(templates),

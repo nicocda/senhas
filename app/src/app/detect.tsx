@@ -3,27 +3,35 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CameraPermissionGate, HandCamera } from '@/camera/hand-camera';
 import { type LiveFrame, useHandTracking } from '@/camera/use-hand-tracking';
-import { catalog } from '@/catalog/catalog';
+import { catalog, letterOf } from '@/catalog/catalog';
 import { Button } from '@/components/button';
-import { LiveRecognizer, type LiveResult } from '@/recognition/live';
+import { debugLog } from '@/debug/debug-log';
+import type { Prediction } from '@/recognition/classifier';
+import { Interpreter, type InterpreterState } from '@/recognition/interpreter';
 import { classifierFor, classifyHand, movementRecognizerFor } from '@/recognition/models';
-import { PredictionSmoother } from '@/recognition/smoothing';
+import { PredictionSmoother, type SmoothedPrediction } from '@/recognition/smoothing';
 
-const colorOf = new Map(catalog.letters.map((entry) => [entry.id, entry.color]));
+/** Color of each letter (V: its first variant's). */
+const colorOf = new Map<string, string>();
+for (const entry of catalog.letters) {
+  if (!colorOf.has(letterOf(entry))) {
+    colorOf.set(letterOf(entry), entry.color);
+  }
+}
 
-/** `all`: every letter, choosing the model per frame (LiveRecognizer). */
-type Mode = 'all' | 1 | 2;
-const MODES: Mode[] = ['all', 1, 2];
+/**
+ * `text`: every letter, written as text by the interpretation engine (Hito 5).
+ * 1, 2: one level's classifier, frame by frame (to look at a single model).
+ */
+type Mode = 'text' | 1 | 2;
+const MODES: Mode[] = ['text', 1, 2];
 const MODE_LABELS: Record<Mode, string> = {
-  all: 'Todas las letras',
+  text: 'Deletrear',
   1: 'Solo nivel 1',
   2: 'Solo nivel 2',
 };
-const KIND_LABELS: Record<LiveResult['kind'], string> = {
-  static: '',
-  movement: 'movimiento',
-  twoHands: 'dos manos',
-};
+/** Letters of text shown: the last ones, so a long text still fits. */
+const VISIBLE_LETTERS = 10;
 
 export default function DetectScreen() {
   return (
@@ -33,57 +41,130 @@ export default function DetectScreen() {
   );
 }
 
-/** Same interface for the integrated recognizer and the single-level classifiers. */
-interface Recognizer {
-  push(frame: LiveFrame, now: number): LiveResult | null;
-  /** Needs two hands tracked (level 4 letters). */
-  twoHands: boolean;
-  /** Needs the face (location relative to the eyes). */
-  face: boolean;
-}
-
-function singleLevel(level: 1 | 2): Recognizer {
-  const classifier = classifierFor(level);
-  const smoother = new PredictionSmoother();
-  return {
-    twoHands: false,
-    face: classifier.usesLocation,
-    push(frame) {
-      const hand = frame.hands.length === 1 ? frame.hands[0] : null;
-      const result =
-        hand == null
-          ? null
-          : classifyHand(classifier, hand, frame.body, frame.imageWidth, frame.imageHeight);
-      if (result == null) {
-        smoother.reset();
-        return null;
-      }
-      const smoothed = smoother.push(result);
-      return smoothed && { ...smoothed, kind: 'static' };
-    },
-  };
-}
-
-function allLetters(): Recognizer {
-  const recognizer = new LiveRecognizer(
-    classifierFor('static'),
-    classifierFor(4),
-    movementRecognizerFor(),
-  );
-  return { twoHands: true, face: true, push: (frame, now) => recognizer.push(frame, now) };
-}
-
 function LiveDetection() {
-  const [mode, setMode] = useState<Mode>('all');
-  const [prediction, setPrediction] = useState<LiveResult | null>(null);
-  const [hasHand, setHasHand] = useState(false);
+  const [mode, setMode] = useState<Mode>('text');
+  return mode === 'text' ? (
+    <TextDetection onNextMode={() => setMode(MODES[1])} />
+  ) : (
+    <LevelDetection
+      level={mode}
+      onNextMode={() => setMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length])}
+    />
+  );
+}
 
-  // A fresh recognizer per mode: no state carried over between modes.
-  const recognizer = useMemo(() => (mode === 'all' ? allLetters() : singleLevel(mode)), [mode]);
+/** Same comparison as React would need: re-render only when what's shown changes. */
+function sameState(a: InterpreterState, b: InterpreterState): boolean {
+  return (
+    a.text.join() === b.text.join() &&
+    a.moving === b.moving &&
+    a.hypothesis?.letter === b.hypothesis?.letter &&
+    Math.round((a.hypothesis?.progress ?? 0) * 4) === Math.round((b.hypothesis?.progress ?? 0) * 4)
+  );
+}
+
+const EMPTY: InterpreterState = { text: [], hypothesis: null, moving: false };
+
+function TextDetection({ onNextMode }: { onNextMode: () => void }) {
+  const interpreter = useMemo(
+    () =>
+      new Interpreter(
+        classifierFor('static'),
+        classifierFor(4),
+        movementRecognizerFor(),
+        'right',
+        (message) => debugLog(message),
+      ),
+    [],
+  );
+  const [state, setState] = useState<InterpreterState>(EMPTY);
+  const [hasHand, setHasHand] = useState(false);
 
   const onLiveFrame = useCallback(
     (frame: LiveFrame) => {
-      const result = recognizer.push(frame, Date.now());
+      const next = interpreter.push(frame, Date.now());
+      setHasHand(frame.hands.length > 0);
+      setState((previous) => (sameState(previous, next) ? previous : next));
+    },
+    [interpreter],
+  );
+
+  const { frameOutput, landmarks, body, imageSize, stats } = useHandTracking({
+    // Two hands for Ñ, Q, W, X; the face for location and movements.
+    numHands: 2,
+    bodyReference: 'face',
+    onLiveFrame,
+  });
+
+  const clear = () => {
+    interpreter.clear();
+    setState(EMPTY);
+  };
+
+  const visible = state.text.slice(-VISIBLE_LETTERS);
+  return (
+    <View style={styles.fill}>
+      <HandCamera
+        frameOutput={frameOutput}
+        landmarks={landmarks}
+        body={body}
+        imageSize={imageSize}
+      />
+      <Text style={styles.stats}>
+        {stats.fps} FPS · manos {stats.inferenceMs} ms · cara {stats.bodyMs} ms
+      </Text>
+      <View style={styles.result}>
+        <View style={styles.textBox}>
+          {state.text.length > VISIBLE_LETTERS && <Text style={styles.ellipsis}>…</Text>}
+          {visible.map((letter, index) => (
+            <Text key={index} style={[styles.textLetter, { color: colorOf.get(letter) }]}>
+              {letter}
+            </Text>
+          ))}
+          {state.hypothesis != null && (
+            // Being held: grows more opaque until it's written.
+            <Text
+              style={[
+                styles.textLetter,
+                styles.hypothesis,
+                { opacity: 0.25 + 0.5 * state.hypothesis.progress },
+              ]}>
+              {state.hypothesis.letter}
+            </Text>
+          )}
+          {state.text.length === 0 && state.hypothesis == null && (
+            <Text style={styles.placeholder}>
+              {hasHand ? 'Sostené una letra' : 'Mostrá la mano'}
+            </Text>
+          )}
+        </View>
+        {state.moving && <Text style={styles.hint}>Movimiento…</Text>}
+      </View>
+      <View style={styles.bottomBar}>
+        <Button label={MODE_LABELS.text} onPress={onNextMode} />
+        <Button label="Borrar" onPress={clear} disabled={state.text.length === 0} />
+      </View>
+    </View>
+  );
+}
+
+function LevelDetection({ level, onNextMode }: { level: 1 | 2; onNextMode: () => void }) {
+  const classifier = classifierFor(level);
+  const smoother = useMemo(() => new PredictionSmoother(), []);
+  const [prediction, setPrediction] = useState<SmoothedPrediction | null>(null);
+  const [hasHand, setHasHand] = useState(false);
+
+  const onLiveFrame = useCallback(
+    (frame: LiveFrame) => {
+      const hand = frame.hands.length === 1 ? frame.hands[0] : null;
+      const raw: Prediction | null =
+        hand == null
+          ? null
+          : classifyHand(classifier, hand, frame.body, frame.imageWidth, frame.imageHeight);
+      if (raw == null) {
+        smoother.reset();
+      }
+      const result = raw == null ? null : smoother.push(raw);
       setHasHand(frame.hands.length > 0);
       // Re-render only when what's shown changes (letter, or confidence by 5%).
       setPrediction((previous) =>
@@ -93,20 +174,14 @@ function LiveDetection() {
           : result,
       );
     },
-    [recognizer],
+    [classifier, smoother],
   );
 
   const { frameOutput, landmarks, body, imageSize, stats } = useHandTracking({
-    // Two hands only when level 4 letters are possible: it costs frames per second.
-    numHands: recognizer.twoHands ? 2 : 1,
-    bodyReference: recognizer.face ? 'face' : 'none',
+    numHands: 1,
+    bodyReference: classifier.usesLocation ? 'face' : 'none',
     onLiveFrame,
   });
-
-  const nextMode = () => {
-    setPrediction(null);
-    setMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length]);
-  };
 
   return (
     <View style={styles.fill}>
@@ -118,7 +193,7 @@ function LiveDetection() {
       />
       <Text style={styles.stats}>
         {stats.fps} FPS · manos {stats.inferenceMs} ms
-        {recognizer.face && ` · cara ${stats.bodyMs} ms`}
+        {classifier.usesLocation && ` · cara ${stats.bodyMs} ms`}
       </Text>
       <View style={styles.result}>
         {prediction != null ? (
@@ -126,21 +201,18 @@ function LiveDetection() {
             <View
               style={[
                 styles.letterBadge,
-                { backgroundColor: colorOf.get(prediction.label) ?? '#208AEF' },
+                { backgroundColor: colorOf.get(prediction.letter) ?? '#208AEF' },
               ]}>
               <Text style={styles.letter}>{prediction.letter}</Text>
             </View>
-            <Text style={styles.confidence}>
-              {Math.round(prediction.confidence * 100)}%
-              {KIND_LABELS[prediction.kind] !== '' && ` · ${KIND_LABELS[prediction.kind]}`}
-            </Text>
+            <Text style={styles.hint}>{Math.round(prediction.confidence * 100)}%</Text>
           </>
         ) : (
           <Text style={styles.hint}>{hasHand ? '¿…?' : 'Mostrá una letra'}</Text>
         )}
       </View>
       <View style={styles.bottomBar}>
-        <Button label={MODE_LABELS[mode]} onPress={nextMode} />
+        <Button label={MODE_LABELS[level]} onPress={onNextMode} />
       </View>
     </View>
   );
@@ -153,9 +225,36 @@ const styles = StyleSheet.create({
   result: {
     position: 'absolute',
     top: 96,
-    alignSelf: 'center',
+    left: 16,
+    right: 16,
     alignItems: 'center',
     gap: 6,
+  },
+  textBox: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderRadius: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    minHeight: 80,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  textLetter: {
+    fontSize: 56,
+    fontWeight: '800',
+  },
+  hypothesis: {
+    color: '#6B7280',
+  },
+  ellipsis: {
+    color: '#6B7280',
+    fontSize: 40,
+  },
+  placeholder: {
+    color: '#6B7280',
+    fontSize: 20,
   },
   letterBadge: {
     alignItems: 'center',
@@ -170,20 +269,11 @@ const styles = StyleSheet.create({
     fontSize: 96,
     fontWeight: '800',
   },
-  confidence: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 6,
-    color: 'white',
-    fontSize: 18,
-    fontVariant: ['tabular-nums'],
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
   hint: {
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 6,
     color: 'white',
-    fontSize: 20,
+    fontSize: 18,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },

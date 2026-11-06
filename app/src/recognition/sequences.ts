@@ -19,7 +19,10 @@ export interface MovementModelFile {
     normalization: number;
     location: number;
   };
+  /** For every letter: 1.25 x its largest correct match (leaving one take out). */
   threshold: number;
+  /** Same rule, per letter (missing in models built before 2026-11-06). */
+  thresholds?: Record<string, number>;
   templates: { label: string; letter: string; frames: number[][] }[];
 }
 
@@ -148,15 +151,12 @@ export interface MovementPrediction {
 }
 
 export class MovementRecognizer {
-  readonly threshold: number;
-
   private readonly model: MovementModelFile;
   /** Median index extent of each letter's templates: how wide its movement usually is. */
   private readonly typicalExtents = new Map<string, number>();
 
   constructor(model: MovementModelFile) {
     this.model = model;
-    this.threshold = model.threshold;
     if (model.sequence.version !== SEQUENCE_VERSION) {
       throw new Error(
         `Movement model uses sequence v${model.sequence.version}, the app v${SEQUENCE_VERSION}. Rebuild it.`,
@@ -172,6 +172,15 @@ export class MovementRecognizer {
     for (const [label, values] of extents) {
       this.typicalExtents.set(label, median(values));
     }
+  }
+
+  /**
+   * Farthest a sequence can be from this letter's closest template and still be
+   * that letter. Per letter: a single threshold is set by the most variable letter
+   * (Z) and accepts transitions as J (ADR 0012).
+   */
+  thresholdFor(label: string): number {
+    return this.model.thresholds?.[label] ?? this.model.threshold;
   }
 
   /** How wide this letter's movement usually is, in eye distances. */
@@ -201,9 +210,9 @@ export class MovementRecognizer {
     return best;
   }
 
-  /** Closest template, only if it's close enough (under the model's threshold). */
+  /** Closest template, only if it's close enough (under its letter's threshold). */
   recognize(points: number[][]): MovementPrediction | null {
     const best = this.nearest(points);
-    return best != null && best.distance <= this.threshold ? best : null;
+    return best != null && best.distance <= this.thresholdFor(best.label) ? best : null;
   }
 }
