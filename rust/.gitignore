@@ -1,2 +1,5 @@
 # Compilados de Cargo.
 /target
+
+# Modelos de MediaPipe (se descargan, ver crates/hand-pipeline).
+/mediapipe
