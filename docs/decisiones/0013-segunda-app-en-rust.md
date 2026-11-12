@@ -77,6 +77,10 @@ empaquetar el APK. NDK 27.1 ya instalado (`%LOCALAPPDATA%\Android\Sdk\ndk\27.1.1
   que se separen.
 - Requiere instalar Rust (`rustup`, targets `aarch64-linux-android` y `x86_64-linux-android`),
   `cargo-ndk` y LLVM/Clang.
+- **Toolchain GNU en Windows (2026-11-12):** Rust necesita un linker. El de Microsoft viene con las
+  Build Tools de Visual Studio (~3,5 GB, piden administrador). Se eligió el host
+  `x86_64-pc-windows-gnu`, que trae su propio linker (MinGW). Para Android no cambia nada: ahí se
+  usa el linker del NDK. Si en la fase 2 LiteRT necesita compilar C++ en la PC, se revisa.
 
 ## Fuentes (consultadas el 2026-11-12)
 

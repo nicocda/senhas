@@ -1,0 +1,14 @@
+[package]
+name = "senhas-core"
+version = "0.1.0"
+description = "Recognition logic of senhas (port of app/src/recognition and app/src/dataset/features.ts)"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
