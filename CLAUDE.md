@@ -32,6 +32,8 @@
 - `cargo run --release --bin evaluate-spelling`: mismo informe que `npm run evaluate:spelling`; tienen que coincidir.
 - Antes de cada commit: `cargo fmt --check` y `cargo clippy --all-targets --release -- -D warnings`.
 - Un cambio en `app/src/recognition/` o `features.ts` se replica en `rust/crates/senhas-core` y se vuelve a correr la paridad.
+- Necesita MinGW-w64 completo en el PATH (WinLibs, instalado con winget): el toolchain GNU de Rust solo no compila `windows-sys`.
+- `powershell -File scripts/fetch-mediapipe.ps1`: baja los modelos de MediaPipe y las imágenes públicas de prueba a `rust/mediapipe/` (fuera de git). La paridad de `hand-pipeline` necesita además `reference/mediapipe_reference.py`, corrido con un Python que tenga `mediapipe` (un venv aparte: no está en `ml/requirements.txt`).
 
 ## Comandos (desde `ml/`, con `.venv\Scripts\python`)
 - `pull_sessions.py`: copia por USB las sesiones exportadas de los teléfonos a `languages/aed/data/`.

@@ -34,6 +34,7 @@ apagado y la app recién instalada. Paquete RN: `com.nicogiordano.senhas`.
 | Error por letra (deletreos) | — | — |
 | Tiempo de un cambio de UI hasta verlo | Fast Refresh: ~1 s | — |
 | Motor en la PC: las 241 tomas (11.528 cuadros) | 505 ms (Node 24) | 88 ms (port literal: 260 ms) |
+| Modelos de MediaPipe en la PC, 1 hilo (palma / landmarks / cara) | LiteRT + XNNPACK: 10,8 / 8,5 / 1,1 ms | tract: 49 / 43 / 8 ms |
 
 ## Notas
 
@@ -51,6 +52,28 @@ apagado y la app recién instalada. Paquete RN: `com.nicogiordano.senhas`.
 - Node no es lento para cuentas: el JIT de V8 compila los bucles numéricos a código de máquina.
   La diferencia de 5,7× es para el motor solo, en la PC. En el teléfono, el motor es una parte
   chica del tiempo por cuadro frente a MediaPipe (~50 ms).
+
+### Fase 2: MediaPipe sin MediaPipe (2026-11-12)
+
+- **Qué hace MediaPipe entre los dos modelos:** el detector de palma recibe la imagen con franjas
+  (*letterbox*) a 192×192 y da 2016 candidatos, uno por "ancla" (una grilla fija de posiciones).
+  Se quedan los de score ≥ 0,5. Los que se superponen se promedian, pesados por su score (NMS
+  ponderado). La palma se convierte en una región rotada, ×2,6 y corrida hacia los dedos. Ese
+  recorte, a 224×224, va al modelo de landmarks. En el cuadro siguiente, la región sale de los
+  landmarks y no se vuelve a buscar la palma: es el **seguimiento**. Son ~600 líneas de Rust.
+- **Paridad con MediaPipe (Python) sobre sus imágenes públicas:** landmarks a 0,00006 de la imagen
+  (0,04 px) en una imagen suelta y a 0,0002 con seguimiento; *world landmarks* a 0,04 mm; cara a
+  0,0007. El recorte imita el de OpenCV (posiciones redondeadas a 1/32 de píxel, resultado en 8 bits).
+- **Un "error" de MediaPipe reproducido a propósito:** al principio los landmarks diferían hasta 2%.
+  Aislando cada paso (correr el modelo sobre la región que sale de los landmarks de MediaPipe dio
+  0,00001), quedó la conversión palma → región. El código de Tasks pide
+  `set_rotation_vector_target_angle(90)`, y ese campo está en **radianes** (el de grados es
+  `rotation_vector_target_angle_degrees`). La región de la palma queda ~27° girada de más, y el
+  modelo de landmarks lo tolera. Con 90 radianes, todo coincide. Sin el código fuente abierto, esto
+  no se encuentra: es parte del costo de rehacer una librería.
+- **tract es correcto pero lento:** da los mismos números que LiteRT (cuarta cifra decimal), pero tarda
+  entre 4,5 y 7 veces más. XNNPACK tiene núcleos SIMD escritos a mano para cada procesador. Para la
+  PC alcanza; en el teléfono hace falta LiteRT.
 
 - Las dos apps usan los mismos `.tflite` de MediaPipe y los mismos `model.json`. Las diferencias
   vienen del runtime y del código, no de los modelos.
