@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 hand-pipeline = { path = "../hand-pipeline" }
+senhas-core = { path = "../senhas-core" }
 slint = { version = "1.18.1", features = ["backend-android-activity-06"] }
 log = "0.4"
 

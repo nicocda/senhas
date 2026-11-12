@@ -20,24 +20,28 @@ unsafe extern "C" {}
 const WIDTH: i32 = 1280;
 const HEIGHT: i32 = 720;
 const MAX_IMAGES: i32 = 3;
-const LENS_FACING_FRONT: u8 = 0;
-const LENS_FACING_BACK: u8 = 1;
+pub const LENS_FACING_FRONT: u8 = 0;
+pub const LENS_FACING_BACK: u8 = 1;
 
 /// Which camera: the front one, as in the React Native app, unless the developer
 /// property `debug.senhas.camera` is `back`. The emulator's back camera is a
 /// virtual scene: handy when there's no webcam, and it films nobody.
 #[must_use]
 pub fn wanted_facing() -> u8 {
-    let mut value = [0u8; 92]; // PROP_VALUE_MAX
-    // SAFETY: the name is NUL-terminated and the buffer has PROP_VALUE_MAX bytes.
-    let length = unsafe {
-        libc::__system_property_get(c"debug.senhas.camera".as_ptr(), value.as_mut_ptr().cast())
-    };
-    if &value[..length.max(0) as usize] == b"back" {
+    if developer_property(c"debug.senhas.camera") == "back" {
         LENS_FACING_BACK
     } else {
         LENS_FACING_FRONT
     }
+}
+
+/// A system property (`adb shell setprop <name> <value>`); empty if unset.
+#[must_use]
+pub fn developer_property(name: &CStr) -> String {
+    let mut value = [0u8; 92]; // PROP_VALUE_MAX
+    // SAFETY: the name is NUL-terminated and the buffer has PROP_VALUE_MAX bytes.
+    let length = unsafe { libc::__system_property_get(name.as_ptr(), value.as_mut_ptr().cast()) };
+    String::from_utf8_lossy(&value[..length.max(0) as usize]).into_owned()
 }
 
 pub type FrameCallback = Box<dyn FnMut(RgbImage) + Send>;

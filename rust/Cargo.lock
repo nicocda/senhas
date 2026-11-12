@@ -4211,6 +4211,7 @@ dependencies = [
  "libc",
  "log",
  "ndk-sys 0.6.0+11769913",
+ "senhas-core",
  "slint",
  "slint-build",
 ]

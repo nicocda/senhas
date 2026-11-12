@@ -14,12 +14,15 @@ pub trait Model {
 
 /// Loads a `.tflite` file with the default engine.
 pub fn load(path: &Path) -> Result<Box<dyn Model>, BackendError> {
-    Ok(Box::new(tract_backend::TractModel::load(path)?))
+    load_bytes(&std::fs::read(path)?)
+}
+
+/// Loads a `.tflite` model from memory (e.g. bundled in the app with `include_bytes!`).
+pub fn load_bytes(bytes: &[u8]) -> Result<Box<dyn Model>, BackendError> {
+    Ok(Box::new(tract_backend::TractModel::load(bytes)?))
 }
 
 mod tract_backend {
-    use std::path::Path;
-
     use tract_tflite::prelude::*;
 
     use super::{BackendError, Model};
@@ -29,9 +32,9 @@ mod tract_backend {
     }
 
     impl TractModel {
-        pub fn load(path: &Path) -> Result<Self, BackendError> {
+        pub fn load(mut bytes: &[u8]) -> Result<Self, BackendError> {
             let plan = tract_tflite::tflite()
-                .model_for_path(path)?
+                .model_for_read(&mut bytes)?
                 .into_optimized()?
                 .into_runnable()?;
             Ok(Self { plan })

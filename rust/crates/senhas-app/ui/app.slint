@@ -1,9 +1,22 @@
-// senhas, 100% Rust (ADR 0013). Fase 8.3: the camera preview.
+// senhas, 100% Rust (ADR 0013): the Detectar screen.
+
+import { Button } from "std-widgets.slint";
 
 export component App inherits Window {
     in property <image> frame;
+    // Upright image size, to draw the skeleton over it.
+    in property <int> frame-width: 720;
+    in property <int> frame-height: 1280;
+    // SVG path in image pixels: the hands' bones.
+    in property <string> skeleton;
+    // Letters written so far, and the one being held (with how far along it is).
+    in property <string> text;
+    in property <string> hypothesis;
+    in property <float> progress;
+    in property <bool> moving;
     in property <string> status: "Iniciando la cámara…";
     in property <string> stats;
+    callback clear();
 
     title: "senhas (Rust)";
     background: #101418;
@@ -11,27 +24,69 @@ export component App inherits Window {
     VerticalLayout {
         Rectangle {
             vertical-stretch: 1;
-            Image {
-                width: 100%;
-                height: 100%;
-                source: frame;
-                image-fit: contain;
+            // Its own size comes from the layout, not from the preview inside
+            // (which is sized from it: otherwise, a binding loop).
+            min-width: 0px;
+            min-height: 0px;
+            preferred-width: 0px;
+            preferred-height: 0px;
+            preview := Rectangle {
+                width: min(parent.width, parent.height * root.frame-width / root.frame-height);
+                height: self.width * root.frame-height / root.frame-width;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.frame;
+                    image-fit: fill;
+                }
+                Path {
+                    width: 100%;
+                    height: 100%;
+                    viewbox-width: root.frame-width;
+                    viewbox-height: root.frame-height;
+                    commands: root.skeleton;
+                    stroke: #4ade80;
+                    stroke-width: 3px;
+                }
             }
         }
         Rectangle {
-            height: 96px;
             background: #1c2228;
             VerticalLayout {
-                padding: 12px;
-                Text {
-                    text: status;
-                    color: white;
-                    font-size: 20px;
+                padding: 16px;
+                spacing: 8px;
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text {
+                        text: root.text == "" ? "—" : root.text;
+                        color: white;
+                        font-size: 40px;
+                        horizontal-stretch: 1;
+                        overflow: elide;
+                    }
+                    Text {
+                        text: root.moving ? "↝" : root.hypothesis;
+                        color: rgba(255, 255, 255, 0.35 + 0.65 * root.progress);
+                        font-size: 40px;
+                    }
+                    Button {
+                        text: "Borrar";
+                        clicked => {
+                            root.clear();
+                        }
+                    }
                 }
                 Text {
-                    text: stats;
+                    text: root.status;
                     color: #9aa7b1;
                     font-size: 16px;
+                }
+                Text {
+                    text: root.stats;
+                    color: #9aa7b1;
+                    font-size: 14px;
                 }
             }
         }
