@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-feature android:name="android.hardware.camera.front" android:required="true" />
+
+  <!-- hasCode=false: there is no Java/Kotlin in the APK, only libsenhas_app.so. -->
+  <application
+    android:label="senhas (Rust)"
+    android:hasCode="false"
+    android:extractNativeLibs="false">
+    <activity
+      android:name="android.app.NativeActivity"
+      android:exported="true"
+      android:screenOrientation="portrait"
+      android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+      android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+      <meta-data android:name="android.app.lib_name" android:value="senhas_app" />
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

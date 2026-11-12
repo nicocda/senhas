@@ -33,6 +33,8 @@
 - Antes de cada commit: `cargo fmt --check` y `cargo clippy --all-targets --release -- -D warnings`.
 - Un cambio en `app/src/recognition/` o `features.ts` se replica en `rust/crates/senhas-core` y se vuelve a correr la paridad.
 - Necesita MinGW-w64 completo en el PATH (WinLibs, instalado con winget): el toolchain GNU de Rust solo no compila `windows-sys`.
+- `powershell -File scripts/android.ps1` (`-Phone` para el teléfono, arm64, release): compila la app Rust con `cargo-ndk`, la empaqueta con Gradle (`rust/android/`) y la instala. En el emulador la frontal es la webcam de la PC: `adb -e shell setprop debug.senhas.camera back` usa la trasera virtual (no filma a nadie).
+- `cargo ndk -t x86_64 -P 26 clippy --release -p senhas-app -- -D warnings`: `senhas-app` solo compila para Android (necesita `ANDROID_HOME`, `ANDROID_NDK_HOME` y `ANDROID_JAR`, como en `android.ps1`).
 - `powershell -File scripts/fetch-mediapipe.ps1`: baja los modelos de MediaPipe y las imágenes públicas de prueba a `rust/mediapipe/` (fuera de git). La paridad de `hand-pipeline` necesita además `reference/mediapipe_reference.py`, corrido con un Python que tenga `mediapipe` (un venv aparte: no está en `ml/requirements.txt`).
 
 ## Comandos (desde `ml/`, con `.venv\Scripts\python`)

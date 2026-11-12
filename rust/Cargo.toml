@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
+# senhas-app only builds for Android (cargo ndk, scripts/android.ps1).
+default-members = ["crates/senhas-core", "crates/hand-pipeline"]
 
 [workspace.package]
 edition = "2024"

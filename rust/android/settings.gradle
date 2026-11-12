@@ -1,0 +1,17 @@
+// Packages the Rust library (built by cargo-ndk into app/src/main/jniLibs) as an APK.
+// No Java or Kotlin code: the activity is Android's NativeActivity (ADR 0013).
+pluginManagement {
+  repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+dependencyResolutionManagement {
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+rootProject.name = 'senhas-rust'
+include ':app'

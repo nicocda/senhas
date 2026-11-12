@@ -1,0 +1,27 @@
+[package]
+name = "senhas-app"
+version = "0.1.0"
+description = "The senhas Android app, 100% Rust (ADR 0013)"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hand-pipeline = { path = "../hand-pipeline" }
+slint = { version = "1.18.1", features = ["backend-android-activity-06"] }
+log = "0.4"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.15"
+jni = "0.21"
+libc = "0.2"
+ndk-sys = { version = "0.6", features = ["media"] }
+
+[build-dependencies]
+slint-build = "1.18.1"
+
+[lints]
+workspace = true

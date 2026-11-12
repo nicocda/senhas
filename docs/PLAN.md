@@ -345,7 +345,7 @@ cámara por el NDK y los `.tflite` de MediaPipe con LiteRT. Decisión y stack:
 - [ ] **8.0b** Línea de base: medir la app RN en el teléfono con el protocolo
 - [x] **8.1** `senhas-core`: pasar a Rust la normalización, el clasificador, DTW, el suavizado y el motor; test de paridad con TS sobre las sesiones; `evaluate-spelling` en Rust. Paridad bit a bit en 11.528 cuadros; motor 5,7× más rápido que Node en la PC
 - [x] **8.2** `hand-pipeline` en la PC: detección de palma, recorte, landmarks (incluye world) y cara; paridad contra MediaPipe Python con imágenes públicas. **Seguir**: landmarks a 0,04 px (0,0002 con seguimiento). En la PC corre con tract (correcto, pero ~5× más lento que LiteRT)
-- [ ] **8.3** App Slint en Android (`cargo-ndk`) con vista previa de la cámara por el NDK
+- [x] **8.3** App Slint en Android (`cargo-ndk` + Gradle mínimo, `NativeActivity`, sin Java/Kotlin propio) con vista previa de la cámara por el NDK (Camera2 C API), permiso por JNI y cámara cerrada en segundo plano. Probada en el emulador (cámara trasera virtual, ~28 cuadros/s); **falta el teléfono**
 - [ ] **8.4** Detectar: cámara → pipeline → core → letra y esqueleto
 - [ ] **8.5** Deletrear, medición con el mismo protocolo y comparación final
 

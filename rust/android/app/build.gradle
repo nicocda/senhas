@@ -1,0 +1,24 @@
+plugins {
+  id 'com.android.application'
+}
+
+android {
+  namespace = 'com.nicogiordano.senhas.rust'
+  compileSdk = 37
+  ndkVersion = '27.1.12297006'
+
+  defaultConfig {
+    applicationId = 'com.nicogiordano.senhas.rust'
+    minSdk = 26
+    targetSdk = 37
+    versionCode = 1
+    versionName = '0.1.0'
+  }
+
+  buildTypes {
+    release {
+      // Signed with the debug key: a lab build, installed by USB (like ADR 0011).
+      signingConfig = signingConfigs.debug
+    }
+  }
+}

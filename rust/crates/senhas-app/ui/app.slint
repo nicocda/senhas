@@ -1,0 +1,39 @@
+// senhas, 100% Rust (ADR 0013). Fase 8.3: the camera preview.
+
+export component App inherits Window {
+    in property <image> frame;
+    in property <string> status: "Iniciando la cámara…";
+    in property <string> stats;
+
+    title: "senhas (Rust)";
+    background: #101418;
+
+    VerticalLayout {
+        Rectangle {
+            vertical-stretch: 1;
+            Image {
+                width: 100%;
+                height: 100%;
+                source: frame;
+                image-fit: contain;
+            }
+        }
+        Rectangle {
+            height: 96px;
+            background: #1c2228;
+            VerticalLayout {
+                padding: 12px;
+                Text {
+                    text: status;
+                    color: white;
+                    font-size: 20px;
+                }
+                Text {
+                    text: stats;
+                    color: #9aa7b1;
+                    font-size: 16px;
+                }
+            }
+        }
+    }
+}
