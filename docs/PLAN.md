@@ -65,6 +65,7 @@ senhas/
 ├─ app/                 ← App React Native (Expo)
 │  └─ modules/          ← Código nativo propio (plugin Kotlin de MediaPipe)
 ├─ ml/                  ← Python: captura → dataset → entrenamiento → export .tflite
+├─ rust/                ← Segunda app, 100% Rust, para comparar (Hito 8)
 ├─ docs/
 │  ├─ PLAN.md           ← Este archivo
 │  ├─ decisiones/       ← ADRs
@@ -332,6 +333,24 @@ Ideas para cuando se retome (no son decisiones):
 - Entrenar los niveles 2, 3 y 4 del alfabeto con los datos grabados en el Hito 4 (referencia del cuerpo, secuencias y dos manos)
 - Señas con movimiento: secuencias de puntos y un modelo temporal (LSTM/GRU). Candidato: dataset **LSA64** (CC BY-NC-SA 4.0: uso no comercial, derivados con la misma licencia; tiene video de personas, usarlo solo en local)
 - Tests automatizados (lógica de normalización y suavizado) y CI básica
+
+### Hito 8 — Segunda app en Rust, para comparar (en curso)
+
+Misma app (Detectar y Deletrear), con los mismos modelos y datos, escrita en Rust: UI en Slint,
+cámara por el NDK y los `.tflite` de MediaPipe con LiteRT. Decisión y stack:
+[ADR 0013](decisiones/0013-segunda-app-en-rust.md). Resultados:
+[comparacion-rn-rust.md](aprendizaje/comparacion-rn-rust.md).
+
+- [x] **8.0** Investigación del stack (ADR 0013) y protocolo de medición
+- [ ] **8.0b** Línea de base: medir la app RN en el teléfono con el protocolo
+- [ ] **8.1** `senhas-core`: pasar a Rust la normalización, el clasificador, DTW, el suavizado y el motor; test de paridad con TS sobre las sesiones; `evaluate-spelling` en Rust
+- [ ] **8.2** `hand-pipeline` en la PC: detección de palma, recorte, landmarks (incluye world) y cara con LiteRT; paridad contra MediaPipe Python con imágenes públicas. **Seguir o no seguir**
+- [ ] **8.3** App Slint en Android (`cargo-ndk`) con vista previa de la cámara por el NDK
+- [ ] **8.4** Detectar: cámara → pipeline → core → letra y esqueleto
+- [ ] **8.5** Deletrear, medición con el mismo protocolo y comparación final
+
+**Hecho cuando:** las dos apps corren en el mismo teléfono y la tabla de comparación está completa.
+**Aprendes:** Rust (ownership, crates, FFI), Android sin frameworks (NDK, JNI), y qué hace MediaPipe por dentro.
 
 ---
 
