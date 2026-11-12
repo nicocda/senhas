@@ -75,6 +75,22 @@ apagado y la app recién instalada. Paquete RN: `com.nicogiordano.senhas`.
   entre 4,5 y 7 veces más. XNNPACK tiene núcleos SIMD escritos a mano para cada procesador. Para la
   PC alcanza; en el teléfono hace falta LiteRT.
 
+### Fase 3: la app en Android (2026-11-12)
+
+- **Sin Java propio, pero no sin Java:** el APK es un `NativeActivity` (una actividad de Android que
+  carga una `.so` y le pasa los eventos) con `hasCode="false"`. Igual Java aparece dos veces: el
+  backend de Android de Slint compila un helper en Java en su build script y lo carga en memoria, y el
+  permiso de cámara se pide por JNI (`Activity.requestPermissions`), porque Android no tiene API en C
+  para eso. En Android, todo pasa en algún momento por la máquina virtual de Java.
+- **La cámara en C:** Camera2 del NDK + `AImageReader`, ~300 líneas de Rust `unsafe`. En RN eso lo da
+  VisionCamera. Hay que manejar a mano lo que una librería resuelve: abrir solo en primer plano
+  (Android rechaza la cámara desde segundo plano), cerrarla al salir, rotar según el sensor y
+  convertir YUV a RGB.
+- **Herramientas:** `cargo-apk`, el empaquetador que sugiere Slint, no tiene versiones desde 2023. Se
+  usó `cargo-ndk` + un Gradle mínimo (el mismo plugin de Android que la app RN, 9.2.1).
+- **Ciclo de desarrollo:** un cambio en Rust es recompilar la `.so` (10 s incremental, ~4 min desde
+  cero) + empaquetar con Gradle (5 s) + instalar. En RN, un cambio de UI se ve en ~1 s con Fast Refresh.
+
 - Las dos apps usan los mismos `.tflite` de MediaPipe y los mismos `model.json`. Las diferencias
   vienen del runtime y del código, no de los modelos.
 - En RN, MediaPipe ya corre en Kotlin nativo y solo el clasificador corre en JS. La ganancia de Rust

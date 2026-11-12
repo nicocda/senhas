@@ -1,0 +1,4 @@
+plugins {
+  // Same Android Gradle Plugin as the React Native app.
+  id 'com.android.application' version '9.2.1' apply false
+}
