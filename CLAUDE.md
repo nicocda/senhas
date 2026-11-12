@@ -26,6 +26,13 @@
 - `npm run evaluate:spelling`: pasa los deletreos grabados (`spell:PALABRA`) por el motor de Detectar, en Node, y da el error por letra. Correrlo antes y después de cada cambio al motor (`src/recognition/`).
 - Si Metro no encuentra un archivo nuevo ("Unable to resolve"), reiniciarlo con `npx expo start --dev-client --clear`.
 
+## Comandos (desde `rust/`, Hito 8, ADR 0013)
+- Toolchain GNU de Rust (`x86_64-pc-windows-gnu`): no hacen falta las Build Tools de Visual Studio.
+- `cargo test --release`: tests unitarios + paridad con TS. La paridad necesita antes `npm run dump:parity` en `app/` (escribe `ml/runs/parity/ts.json`); sin ese archivo, se saltea.
+- `cargo run --release --bin evaluate-spelling`: mismo informe que `npm run evaluate:spelling`; tienen que coincidir.
+- Antes de cada commit: `cargo fmt --check` y `cargo clippy --all-targets --release -- -D warnings`.
+- Un cambio en `app/src/recognition/` o `features.ts` se replica en `rust/crates/senhas-core` y se vuelve a correr la paridad.
+
 ## Comandos (desde `ml/`, con `.venv\Scripts\python`)
 - `pull_sessions.py`: copia por USB las sesiones exportadas de los teléfonos a `languages/aed/data/`.
 - `train.py --level 1|2|4|static`: entrena, evalúa (una persona o ronda afuera), exporta `.tflite`, `model.json` (lo usa la app) y `manifest.json`.

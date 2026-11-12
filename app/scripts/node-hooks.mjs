@@ -1,9 +1,11 @@
 // Lets Node run the app's TypeScript outside Metro (scripts/evaluate-spelling.ts):
-// resolves the "@/" alias and extensionless relative imports to .ts files, and
-// loads JSON imports as modules. Node strips the types itself (Node >= 22.18).
+// resolves the "@/" alias and extensionless relative imports (in src/ and scripts/)
+// to .ts files, and loads JSON imports as modules. Node strips the types itself
+// (Node >= 22.18).
 import { readFile } from 'node:fs/promises';
 
 const src = new URL('../src/', import.meta.url);
+const scripts = new URL('./', import.meta.url);
 
 export async function resolve(specifier, context, next) {
   if (specifier.startsWith('@/')) {
@@ -12,7 +14,7 @@ export async function resolve(specifier, context, next) {
   if (
     specifier.startsWith('.') &&
     !/\.\w+$/.test(specifier) &&
-    context.parentURL?.startsWith(src.href)
+    (context.parentURL?.startsWith(src.href) || context.parentURL?.startsWith(scripts.href))
   ) {
     return next(new URL(specifier + '.ts', context.parentURL).href, context);
   }

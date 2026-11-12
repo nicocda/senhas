@@ -48,7 +48,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm run lint && npm run format:check",
-    "evaluate:spelling": "node --no-warnings --import ./scripts/node-loader.mjs scripts/evaluate-spelling.ts"
+    "evaluate:spelling": "node --no-warnings --import ./scripts/node-loader.mjs scripts/evaluate-spelling.ts",
+    "dump:parity": "node --no-warnings --import ./scripts/node-loader.mjs scripts/dump-parity.ts"
   },
   "private": true
 }
