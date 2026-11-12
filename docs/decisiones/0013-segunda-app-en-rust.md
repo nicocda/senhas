@@ -77,6 +77,27 @@ empaquetar el APK. NDK 27.1 ya instalado (`%LOCALAPPDATA%\Android\Sdk\ndk\27.1.1
   que se separen.
 - Requiere instalar Rust (`rustup`, targets `aarch64-linux-android` y `x86_64-linux-android`),
   `cargo-ndk` y LLVM/Clang.
+- **Toolchain GNU en Windows (2026-11-12):** Rust necesita un linker. El de Microsoft viene con las
+  Build Tools de Visual Studio (~3,5 GB, piden administrador). Se eligió el host
+  `x86_64-pc-windows-gnu`, que trae su propio linker (MinGW). Para Android no cambia nada: ahí se
+  usa el linker del NDK. Si en la fase 2 LiteRT necesita compilar C++ en la PC, se revisa.
+- **MinGW completo (2026-11-12):** el toolchain GNU trae `dlltool`, pero no el ensamblador (`as`)
+  que `dlltool` necesita, así que no compila crates que importan DLLs de Windows con `raw-dylib`
+  (`windows-sys`). Se instaló WinLibs (MinGW-w64 UCRT, `winget --scope user`, ~950 MB, sin
+  administrador), que queda en el PATH del usuario.
+
+## Fase 2: inferencia (2026-11-12)
+
+- **tract en la PC:** es Rust puro, no necesita instalar nada más y corre los tres modelos de
+  MediaPipe con los mismos números que LiteRT. Pero es entre 4,5 y 7 veces más lento (palma 49 ms
+  contra 11 ms, en un hilo). `hand-pipeline` usa el trait `backend::Model`: el pipeline no sabe qué
+  motor corre debajo.
+- **LiteRT en Android (fase 3/4):** su crate compila C++ con clang y genera los bindings con bindgen
+  en cada build (necesita `clang`, `libclang` y CMake). Para Android se usa el clang del NDK; en la
+  PC no hace falta.
+- **Ángulo de la palma en radianes:** MediaPipe Tasks usa `rotation_vector_target_angle(90)`, un
+  campo en radianes ([proto](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/calculators/util/detections_to_rects_calculator.proto)).
+  Se reproduce igual (`hand.rs`, `PALM_TARGET_ANGLE`): la app RN usa ese mismo MediaPipe.
 
 ## Fuentes (consultadas el 2026-11-12)
 
